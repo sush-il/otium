@@ -17,6 +17,9 @@ class BlockerAccessibilityService : AccessibilityService() {
     private val engine: BlockEngine
         get() = (application as FocusBlockApp).container.blockEngine
 
+    // Avoid pressing Back many times for one Shorts/Reels screen
+    private var lastBackAt = 0L
+
     override fun onServiceConnected() {
         engine.attachAccessibility(this)
         // Content events (for reading browser URLs) plus window changes. Throttled so
@@ -35,12 +38,36 @@ class BlockerAccessibilityService : AccessibilityService() {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 engine.onWindowEvent(pkg, event.className?.toString())
                 engine.onForeground(pkg)
-                if (pkg in engine.browserPackages) checkBrowser(pkg)
+                checkContent(pkg)
             }
-            // Only browsers do content work; everything else returns immediately (cheap)
-            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ->
-                if (pkg in engine.browserPackages) checkBrowser(pkg)
+            // Only browsers/feeds do content work; everything else returns immediately (cheap)
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> checkContent(pkg)
         }
+    }
+
+    private fun checkContent(pkg: String) {
+        if (pkg !in engine.contentPackages) return
+        if (pkg in engine.browserPackages) checkBrowser(pkg)
+        checkFeeds(pkg)
+    }
+
+    /** Close a blocked in-app feed (YouTube Shorts, Instagram Reels…) by pressing Back. */
+    private fun checkFeeds(pkg: String) {
+        val viewIds = engine.blockedSectionViewIds(pkg)
+        if (viewIds.isEmpty()) return
+        val root = rootInActiveWindow ?: return
+        val onFeed = viewIds.any { id ->
+            try {
+                root.findAccessibilityNodeInfosByViewId(id).isNotEmpty()
+            } catch (_: Exception) {
+                false
+            }
+        }
+        if (!onFeed) return
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastBackAt < 800) return
+        lastBackAt = now
+        performGlobalAction(GLOBAL_ACTION_BACK)
     }
 
     /** Read the address bar via its known view id and hand the text to the engine. */

@@ -1,0 +1,6 @@
+{
+  "_comment": "In-app feed sections to close with Back. viewId = the on-screen element shown only on that feed; key = which setting enables it. Update viewId if an app changes it.",
+  "com.google.android.youtube": { "viewId": "com.google.android.youtube:id/reel_player_page_container", "key": "youtube_shorts" },
+  "com.instagram.android": { "viewId": "com.instagram.android:id/clips_video_container", "key": "instagram_reels" },
+  "com.facebook.katana": { "viewId": "com.facebook.katana:id/reels_viewer_root", "key": "facebook_reels" }
+}

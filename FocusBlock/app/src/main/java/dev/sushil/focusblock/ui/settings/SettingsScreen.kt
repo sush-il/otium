@@ -37,6 +37,7 @@ fun SettingsScreen(
     onOpenSetup: () -> Unit,
     onOpenExcludedApps: () -> Unit,
     onOpenWebContent: () -> Unit,
+    onOpenFeeds: () -> Unit,
 ) {
     val container = appContainer()
     val vm: SettingsViewModel = viewModel(
@@ -103,6 +104,14 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedButton(onClick = onOpenWebContent) { Text("Websites & keywords") }
+
+            Text("Feeds & content", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+            Text(
+                "Block Shorts, Reels and adult sites.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(onClick = onOpenFeeds) { Text("Feeds & content") }
 
             OutlinedButton(onClick = onOpenSetup, modifier = Modifier.padding(top = 8.dp)) {
                 Text("Permissions & setup")

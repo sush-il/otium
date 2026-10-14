@@ -14,6 +14,7 @@ import dev.sushil.focusblock.data.SettingsStore
 import dev.sushil.focusblock.data.ProfileRepository
 import dev.sushil.focusblock.data.UsageRepository
 import dev.sushil.focusblock.data.BrowserRegistry
+import dev.sushil.focusblock.data.ContentRegistry
 import dev.sushil.focusblock.domain.BlockEvaluator
 import dev.sushil.focusblock.domain.SiteMatcher
 import dev.sushil.focusblock.domain.UsageSource
@@ -28,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,6 +56,7 @@ class BlockEngine(
     modeStore: ModeStore,
     settingsStore: SettingsStore,
     private val browsers: BrowserRegistry,
+    private val content: ContentRegistry,
     private val grants: UnlockGrants,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -64,6 +67,8 @@ class BlockEngine(
     @Volatile private var excludedApps: Set<String> = emptySet()
     @Volatile private var blockedSites: Set<String> = emptySet()
     @Volatile private var blockedKeywords: Set<String> = emptySet()
+    @Volatile private var enabledSectionKeys: Set<String> = emptySet()
+    @Volatile private var blockAdult: Boolean = false
 
     private var current: String? = null
     private var checkJob: Job? = null
@@ -104,7 +109,28 @@ class BlockEngine(
         }
         scope.launch { settingsStore.blockedSites.collect { blockedSites = it } }
         scope.launch { settingsStore.blockedKeywords.collect { blockedKeywords = it } }
+        scope.launch { settingsStore.blockAdult.collect { blockAdult = it } }
+        scope.launch {
+            combine(
+                settingsStore.blockYoutubeShorts,
+                settingsStore.blockInstagramReels,
+                settingsStore.blockFacebookReels,
+            ) { yt, ig, fb ->
+                buildSet {
+                    if (yt) add("youtube_shorts")
+                    if (ig) add("instagram_reels")
+                    if (fb) add("facebook_reels")
+                }
+            }.collect { enabledSectionKeys = it }
+        }
     }
+
+    /** Packages where we also read content: browsers (URLs) and apps with a feed to close. */
+    val contentPackages: Set<String> get() = browsers.browserPackages + content.sectionPackages
+
+    /** View ids of feeds that are enabled for [pkg] right now, for the service to look for. */
+    fun blockedSectionViewIds(pkg: String): List<String> =
+        content.sections.filter { it.packageName == pkg && it.settingKey in enabledSectionKeys }.map { it.viewId }
 
     val browserPackages: Set<String> get() = browsers.browserPackages
 
@@ -112,7 +138,9 @@ class BlockEngine(
 
     /** Browser address-bar text changed: send the user home if it's a blocked site/search. */
     fun onBrowserText(pkg: String, text: String) {
-        val reason = SiteMatcher.blockedReason(text, blockedSites, blockedKeywords) ?: return
+        val sites = if (blockAdult) blockedSites + content.adultDomains else blockedSites
+        val keywords = if (blockAdult) blockedKeywords + content.adultKeywords else blockedKeywords
+        val reason = SiteMatcher.blockedReason(text, sites, keywords) ?: return
         log("blocked browsing in $pkg: $reason")
         block(pkg, reason)
     }

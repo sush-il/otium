@@ -14,6 +14,7 @@ import dev.sushil.focusblock.ui.onboarding.PermissionsScreen
 import dev.sushil.focusblock.ui.profiles.ProfileEditScreen
 import dev.sushil.focusblock.ui.profiles.ProfileListScreen
 import dev.sushil.focusblock.ui.settings.ExcludedAppsScreen
+import dev.sushil.focusblock.ui.settings.FeedsScreen
 import dev.sushil.focusblock.ui.settings.SettingsScreen
 import dev.sushil.focusblock.ui.settings.WebContentScreen
 import dev.sushil.focusblock.util.Permissions
@@ -27,6 +28,7 @@ object Routes {
     const val EMERGENCY = "emergency"
     const val EXCLUDED_APPS = "excluded_apps"
     const val WEB_CONTENT = "web_content"
+    const val FEEDS = "feeds"
 
     fun profileEdit(id: Long) = "profile/$id"
 }
@@ -61,6 +63,7 @@ fun AppNavHost() {
                 onOpenSetup = { nav.navigate(Routes.PERMISSIONS) },
                 onOpenExcludedApps = { nav.navigate(Routes.EXCLUDED_APPS) },
                 onOpenWebContent = { nav.navigate(Routes.WEB_CONTENT) },
+                onOpenFeeds = { nav.navigate(Routes.FEEDS) },
             )
         }
         composable(Routes.EXCLUDED_APPS) {
@@ -68,6 +71,9 @@ fun AppNavHost() {
         }
         composable(Routes.WEB_CONTENT) {
             WebContentScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Routes.FEEDS) {
+            FeedsScreen(onBack = { nav.popBackStack() })
         }
         composable(
             Routes.PROFILE_EDIT,

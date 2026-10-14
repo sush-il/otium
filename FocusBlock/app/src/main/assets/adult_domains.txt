@@ -1,0 +1,9 @@
+# Starter adult-site blocklist (one host per line). Extend as needed.
+# Matching also covers subdomains (e.g. www. and m.).
+pornhub.com
+xvideos.com
+xnxx.com
+xhamster.com
+redtube.com
+youporn.com
+onlyfans.com

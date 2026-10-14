@@ -34,6 +34,11 @@ class SettingsStore(context: Context) {
     /** Words that block a page/search when they appear in the address bar. */
     val blockedKeywords: Flow<Set<String>> = store.data.map { it[BLOCKED_KEYWORDS] ?: emptySet() }
 
+    val blockYoutubeShorts: Flow<Boolean> = store.data.map { it[BLOCK_YT_SHORTS] ?: false }
+    val blockInstagramReels: Flow<Boolean> = store.data.map { it[BLOCK_IG_REELS] ?: false }
+    val blockFacebookReels: Flow<Boolean> = store.data.map { it[BLOCK_FB_REELS] ?: false }
+    val blockAdult: Flow<Boolean> = store.data.map { it[BLOCK_ADULT] ?: false }
+
     suspend fun setTimerDisplay(value: TimerDisplay) {
         store.edit { it[TIMER_DISPLAY] = value.name }
     }
@@ -54,11 +59,20 @@ class SettingsStore(context: Context) {
         store.edit { it[BLOCKED_KEYWORDS] = value }
     }
 
+    suspend fun setBlockYoutubeShorts(value: Boolean) = store.edit { it[BLOCK_YT_SHORTS] = value }
+    suspend fun setBlockInstagramReels(value: Boolean) = store.edit { it[BLOCK_IG_REELS] = value }
+    suspend fun setBlockFacebookReels(value: Boolean) = store.edit { it[BLOCK_FB_REELS] = value }
+    suspend fun setBlockAdult(value: Boolean) = store.edit { it[BLOCK_ADULT] = value }
+
     private companion object {
         val TIMER_DISPLAY = stringPreferencesKey("timer_display")
         val LOW_TIME_ALERTS = booleanPreferencesKey("low_time_alerts")
         val EXCLUDED_APPS = stringSetPreferencesKey("excluded_apps")
         val BLOCKED_SITES = stringSetPreferencesKey("blocked_sites")
         val BLOCKED_KEYWORDS = stringSetPreferencesKey("blocked_keywords")
+        val BLOCK_YT_SHORTS = booleanPreferencesKey("block_youtube_shorts")
+        val BLOCK_IG_REELS = booleanPreferencesKey("block_instagram_reels")
+        val BLOCK_FB_REELS = booleanPreferencesKey("block_facebook_reels")
+        val BLOCK_ADULT = booleanPreferencesKey("block_adult")
     }
 }
