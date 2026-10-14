@@ -74,6 +74,6 @@ class BlockOverlayController(
     }
 
     private companion object {
-        const val GRACE_HIDE_MS = 2500L
+        const val GRACE_HIDE_MS = 700L
     }
 }

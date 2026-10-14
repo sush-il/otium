@@ -78,8 +78,10 @@ class TimerOverlay(private val context: Context) {
             setTextColor(0xFFFFFFFF.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             background = GradientDrawable().apply {
-                cornerRadius = dp(14).toFloat()
-                setColor(0xCC202124.toInt()) // dark, slightly see-through
+                // Rounded on the right only, so it reads as a tab coming from the left edge
+                val r = dp(22).toFloat()
+                cornerRadii = floatArrayOf(0f, 0f, r, r, r, r, 0f, 0f)
+                setColor(0xE6202124.toInt())
             }
         }
         val slop = ViewConfiguration.get(context).scaledTouchSlop
