@@ -47,5 +47,19 @@ class EditGuard(private val modeStore: ModeStore, private val grants: UnlockGran
         return EditCheck.Allowed
     }
 
+    /** Turning any protection OFF is loosening, so it follows the mode rules. */
+    suspend fun checkLoosen(): EditCheck {
+        val state = modeStore.current()
+        if (state.isStrictActive(LocalDateTime.now(), System.currentTimeMillis())) {
+            return EditCheck.Forbidden("Strict mode is on, so blocking can't be turned off.")
+        }
+        if (state.isLock && state.lock.lockProfiles && state.passwordHash != null &&
+            !grants.isGranted(UnlockGrants.Target.PROFILES)
+        ) {
+            return EditCheck.NeedsPassword
+        }
+        return EditCheck.Allowed
+    }
+
     fun grantProfiles() = grants.grant(UnlockGrants.Target.PROFILES)
 }

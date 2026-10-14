@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 enum class TimerDisplay { FLOATING, NOTIFICATION, HIDDEN }
@@ -40,6 +41,14 @@ class SettingsStore(context: Context) {
     val blockFacebookReels: Flow<Boolean> = store.data.map { it[BLOCK_FB_REELS] ?: false }
     val blockAdult: Flow<Boolean> = store.data.map { it[BLOCK_ADULT] ?: false }
 
+    /** Master switches for the home quick controls. On by default. */
+    val appBlockingEnabled: Flow<Boolean> = store.data.map { it[APP_BLOCKING] ?: true }
+    val siteBlockingEnabled: Flow<Boolean> = store.data.map { it[SITE_BLOCKING] ?: true }
+
+    /** One switch for all three feeds: on if any feed is blocked. */
+    val reelsBlockingEnabled: Flow<Boolean> =
+        combine(blockYoutubeShorts, blockInstagramReels, blockFacebookReels) { yt, ig, fb -> yt || ig || fb }
+
     /** Hour (0-23) when the "day" resets for daily limits and launch counts. Default midnight. */
     val dayResetHour: Flow<Int> = store.data.map { (it[DAY_RESET_HOUR] ?: 0).coerceIn(0, 23) }
 
@@ -68,6 +77,16 @@ class SettingsStore(context: Context) {
     suspend fun setBlockFacebookReels(value: Boolean) = store.edit { it[BLOCK_FB_REELS] = value }
     suspend fun setBlockAdult(value: Boolean) = store.edit { it[BLOCK_ADULT] = value }
 
+    suspend fun setAppBlockingEnabled(value: Boolean) = store.edit { it[APP_BLOCKING] = value }
+    suspend fun setSiteBlockingEnabled(value: Boolean) = store.edit { it[SITE_BLOCKING] = value }
+
+    /** Flip all three feed blockers together from the home quick control. */
+    suspend fun setReelsBlockingEnabled(value: Boolean) = store.edit {
+        it[BLOCK_YT_SHORTS] = value
+        it[BLOCK_IG_REELS] = value
+        it[BLOCK_FB_REELS] = value
+    }
+
     suspend fun setDayResetHour(value: Int) = store.edit { it[DAY_RESET_HOUR] = value.coerceIn(0, 23) }
 
     private companion object {
@@ -80,6 +99,8 @@ class SettingsStore(context: Context) {
         val BLOCK_IG_REELS = booleanPreferencesKey("block_instagram_reels")
         val BLOCK_FB_REELS = booleanPreferencesKey("block_facebook_reels")
         val BLOCK_ADULT = booleanPreferencesKey("block_adult")
+        val APP_BLOCKING = booleanPreferencesKey("app_blocking_enabled")
+        val SITE_BLOCKING = booleanPreferencesKey("site_blocking_enabled")
         val DAY_RESET_HOUR = intPreferencesKey("day_reset_hour")
     }
 }

@@ -69,6 +69,8 @@ class BlockEngine(
     @Volatile private var blockedKeywords: Set<String> = emptySet()
     @Volatile private var enabledSectionKeys: Set<String> = emptySet()
     @Volatile private var blockAdult: Boolean = false
+    @Volatile private var appBlockingEnabled: Boolean = true
+    @Volatile private var siteBlockingEnabled: Boolean = true
 
     private var current: String? = null
     private var checkJob: Job? = null
@@ -111,6 +113,13 @@ class BlockEngine(
         scope.launch { settingsStore.blockedKeywords.collect { blockedKeywords = it } }
         scope.launch { settingsStore.blockAdult.collect { blockAdult = it } }
         scope.launch {
+            settingsStore.appBlockingEnabled.collect {
+                appBlockingEnabled = it
+                current?.let { pkg -> startWatching(pkg) }
+            }
+        }
+        scope.launch { settingsStore.siteBlockingEnabled.collect { siteBlockingEnabled = it } }
+        scope.launch {
             combine(
                 settingsStore.blockYoutubeShorts,
                 settingsStore.blockInstagramReels,
@@ -138,8 +147,15 @@ class BlockEngine(
 
     /** Browser address-bar text changed: send the user home if it's a blocked site/search. */
     fun onBrowserText(pkg: String, text: String) {
-        val sites = if (blockAdult) blockedSites + content.adultDomains else blockedSites
-        val keywords = if (blockAdult) blockedKeywords + content.adultKeywords else blockedKeywords
+        val sites = buildSet {
+            if (siteBlockingEnabled) addAll(blockedSites)
+            if (blockAdult) addAll(content.adultDomains)
+        }
+        val keywords = buildSet {
+            if (siteBlockingEnabled) addAll(blockedKeywords)
+            if (blockAdult) addAll(content.adultKeywords)
+        }
+        if (sites.isEmpty() && keywords.isEmpty()) return
         val reason = SiteMatcher.blockedReason(text, sites, keywords) ?: return
         log("blocked browsing in $pkg: $reason")
         block(pkg, reason)
@@ -211,7 +227,8 @@ class BlockEngine(
             null -> Unit
         }
         while (true) {
-            val rules = profiles
+            // Master app-blocking switch: when off, profiles don't block anything
+            val rules = if (appBlockingEnabled) profiles else emptyList()
             // Reading usage stats is a slow system call, keep it off the main thread
             val result = withContext(Dispatchers.Default) {
                 // One snapshot per round, so each usage value is read at most once
