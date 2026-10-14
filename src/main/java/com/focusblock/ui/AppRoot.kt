@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.focusblock.service.UnlockGrants
 import com.focusblock.ui.common.appContainer
 import com.focusblock.ui.lock.PasswordForm
 import com.focusblock.ui.modes.EmergencyScreen
@@ -30,17 +29,10 @@ import com.focusblock.ui.modes.EmergencyScreen
 fun AppRoot(openEmergency: Boolean, onEmergencyClosed: () -> Unit) {
     val container = appContainer()
     val mode by container.modeStore.state.collectAsStateWithLifecycle(initialValue = null)
-    var granted by remember { mutableStateOf(container.unlockGrants.isGranted(UnlockGrants.Target.APP)) }
     var showEmergency by remember(openEmergency) { mutableStateOf(openEmergency) }
 
-    // Coming back after the 5-minute grant ran out locks the app again
-    LifecycleResumeEffect(Unit) {
-        granted = container.unlockGrants.isGranted(UnlockGrants.Target.APP)
-        onPauseOrDispose { }
-    }
-
     val state = mode ?: return // first DataStore read, a few ms
-    val locked = state.isLock && state.lock.lockApp && state.hasLock && !granted
+    val locked = state.isLock && state.lock.lockApp && state.hasLock
 
     when {
         showEmergency -> EmergencyScreen(onClose = {
@@ -54,11 +46,8 @@ fun AppRoot(openEmergency: Boolean, onEmergencyClosed: () -> Unit) {
             ) {
                 Text("Focus Block is locked", style = MaterialTheme.typography.headlineMedium)
                 PasswordForm(
-                    message = "Type the number to open Focus Block.",
-                    onUnlocked = {
-                        container.unlockGrants.grant(UnlockGrants.Target.APP)
-                        granted = true
-                    },
+                    action = "open Focus Block",
+                    onUnlocked = {}, // the mode flips to Normal, which opens the app
                     onForgot = { showEmergency = true },
                 )
             }

@@ -65,7 +65,6 @@ class LimitPause(private val settings: SettingsStore, private val guard: EditGua
     }
 
     fun onPasswordAccepted() {
-        guard.grantProfiles()
         val retry = passwordNeededFor
         passwordNeededFor = null
         retry?.invoke()
@@ -89,7 +88,7 @@ fun PauseDialogs(pause: LimitPause) {
         )
     }
     if (pause.passwordNeededFor != null) {
-        PasswordDialog("Lock mode: pausing blocking needs you to type a number.", { pause.onPasswordAccepted() }, { pause.passwordNeededFor = null })
+        PasswordDialog("pause blocking", { pause.onPasswordAccepted() }, { pause.passwordNeededFor = null })
     }
 }
 

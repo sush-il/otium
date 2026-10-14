@@ -65,7 +65,6 @@ class BlockEngine(
     settingsStore: SettingsStore,
     private val browsers: BrowserRegistry,
     private val content: ContentRegistry,
-    private val grants: UnlockGrants,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -307,7 +306,6 @@ class BlockEngine(
 
     /** Screen went off: nobody is using the app any more. It's reported again on unlock. */
     fun onScreenOff() {
-        grants.clear()
         clearCurrentSite()
         current = null
         pendingPkg = null
@@ -410,7 +408,7 @@ class BlockEngine(
 
     private sealed interface Guard {
         data class Block(val reason: String) : Guard
-        data class Password(val target: UnlockGrants.Target) : Guard
+        data class Password(val target: LockTarget) : Guard
     }
 
     /** Lock/Strict mode protection of Settings, uninstalling and the Play Store. */
@@ -425,17 +423,17 @@ class BlockEngine(
             if (pkg == PLAY_STORE && state.strict.blockPlayStore) return Guard.Block("Play Store is blocked by Strict mode $until")
         }
         if (state.isLock && state.hasLock) {
-            if (isSettings && state.lock.lockSettings && !grants.isGranted(UnlockGrants.Target.SETTINGS)) {
-                return Guard.Password(UnlockGrants.Target.SETTINGS)
+            if (isSettings && state.lock.lockSettings) {
+                return Guard.Password(LockTarget.SETTINGS)
             }
-            if (isInstaller && !grants.isGranted(UnlockGrants.Target.INSTALLER)) {
-                return Guard.Password(UnlockGrants.Target.INSTALLER)
+            if (isInstaller) {
+                return Guard.Password(LockTarget.INSTALLER)
             }
         }
         return null
     }
 
-    private fun showPasswordGate(pkg: String, target: UnlockGrants.Target) {
+    private fun showPasswordGate(pkg: String, target: LockTarget) {
         current = null
         log("password needed for $pkg ($target)")
         goHome()

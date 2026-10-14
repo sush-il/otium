@@ -3,7 +3,6 @@ package com.focusblock.ui.common
 import com.focusblock.data.ModeStore
 import com.focusblock.domain.StrictPolicy
 import com.focusblock.domain.model.Profile
-import com.focusblock.service.UnlockGrants
 import java.time.LocalDateTime
 
 sealed interface EditCheck {
@@ -13,7 +12,7 @@ sealed interface EditCheck {
 }
 
 /** Decides whether a profile change may go ahead in the current mode. */
-class EditGuard(private val modeStore: ModeStore, private val grants: UnlockGrants) {
+class EditGuard(private val modeStore: ModeStore) {
 
     suspend fun check(old: Profile?, new: Profile?): EditCheck {
         // Making rules stricter is always fine, in every mode
@@ -24,9 +23,7 @@ class EditGuard(private val modeStore: ModeStore, private val grants: UnlockGran
                 "Strict mode is on. You can add apps, lower limits or create profiles, but not loosen or remove rules.",
             )
         }
-        if (state.isLock && state.lock.lockProfiles && state.hasLock &&
-            !grants.isGranted(UnlockGrants.Target.PROFILES)
-        ) {
+        if (state.isLock && state.lock.lockProfiles && state.hasLock)  {
             return EditCheck.NeedsPassword
         }
         return EditCheck.Allowed
@@ -39,9 +36,7 @@ class EditGuard(private val modeStore: ModeStore, private val grants: UnlockGran
         if (state.isStrictActive(LocalDateTime.now(), System.currentTimeMillis())) {
             return EditCheck.Forbidden("Strict mode is on, so profiles can't be paused.")
         }
-        if (state.isLock && state.lock.lockProfiles && state.hasLock &&
-            !grants.isGranted(UnlockGrants.Target.PROFILES)
-        ) {
+        if (state.isLock && state.lock.lockProfiles && state.hasLock)  {
             return EditCheck.NeedsPassword
         }
         return EditCheck.Allowed
@@ -53,13 +48,9 @@ class EditGuard(private val modeStore: ModeStore, private val grants: UnlockGran
         if (state.isStrictActive(LocalDateTime.now(), System.currentTimeMillis())) {
             return EditCheck.Forbidden("Strict mode is on, so blocking can't be turned off.")
         }
-        if (state.isLock && state.lock.lockProfiles && state.hasLock &&
-            !grants.isGranted(UnlockGrants.Target.PROFILES)
-        ) {
+        if (state.isLock && state.lock.lockProfiles && state.hasLock)  {
             return EditCheck.NeedsPassword
         }
         return EditCheck.Allowed
     }
-
-    fun grantProfiles() = grants.grant(UnlockGrants.Target.PROFILES)
 }

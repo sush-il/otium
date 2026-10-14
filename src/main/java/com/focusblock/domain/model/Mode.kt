@@ -25,6 +25,8 @@ data class ModeState(
     val mode: Mode = Mode.NORMAL,
     /** How many digits the Lock-mode typing challenge has; null until Lock has been set up. */
     val lockLength: Int? = null,
+    /** After typing the number, Lock switches itself back on at this time (epoch ms); null = stays Normal. */
+    val relockAt: Long? = null,
     val lock: LockOptions = LockOptions(),
     val strict: StrictOptions = StrictOptions(),
     /** Strict ends at this wall-clock time (epoch ms)… */

@@ -86,7 +86,6 @@ class KeywordsViewModel(private val settings: SettingsStore, private val guard: 
     }
 
     fun onPasswordAccepted() {
-        guard.grantProfiles()
         val retry = passwordNeededFor
         passwordNeededFor = null
         retry?.invoke()
@@ -115,7 +114,7 @@ fun KeywordsScreen(onBack: () -> Unit) {
         )
     }
     if (vm.passwordNeededFor != null) {
-        PasswordDialog("Lock mode: this change needs your password.", { vm.onPasswordAccepted() }, vm::dismissPassword)
+        PasswordDialog("make this change", { vm.onPasswordAccepted() }, vm::dismissPassword)
     }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Keywords") }, navigationIcon = { BackButton(onClick = onBack) }) }) { padding ->

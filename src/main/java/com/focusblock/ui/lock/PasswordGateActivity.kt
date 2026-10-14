@@ -20,7 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.focusblock.FocusBlockApp
-import com.focusblock.service.UnlockGrants
+import com.focusblock.service.LockTarget
 import com.focusblock.ui.MainActivity
 import com.focusblock.ui.theme.FocusBlockTheme
 
@@ -31,15 +31,13 @@ class PasswordGateActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val target = intent.getStringExtra(EXTRA_TARGET)
-            ?.let { runCatching { UnlockGrants.Target.valueOf(it) }.getOrNull() }
-            ?: UnlockGrants.Target.SETTINGS
-        val grants = (application as FocusBlockApp).container.unlockGrants
+            ?.let { runCatching { LockTarget.valueOf(it) }.getOrNull() }
+            ?: LockTarget.SETTINGS
         onBackPressedDispatcher.addCallback(this) { goHome() }
 
-        val (title, message) = when (target) {
-            UnlockGrants.Target.INSTALLER -> "Uninstalling is locked" to
-                "Type the number. You'll then have 5 minutes to uninstall."
-            else -> "Settings is locked" to "Type the number to open Settings for 5 minutes."
+        val (title, action) = when (target) {
+            LockTarget.INSTALLER -> "Uninstalling is locked" to "allow uninstalling"
+            else -> "Settings is locked" to "open Settings"
         }
         setContent {
             FocusBlockTheme {
@@ -50,8 +48,8 @@ class PasswordGateActivity : ComponentActivity() {
                     ) {
                         Text(title, style = MaterialTheme.typography.headlineMedium)
                         PasswordForm(
-                            message = message,
-                            onUnlocked = { onUnlocked(target, grants) },
+                            action = action,
+                            onUnlocked = { onUnlocked(target) },
                             onForgot = {
                                 startActivity(
                                     Intent(this@PasswordGateActivity, MainActivity::class.java)
@@ -68,11 +66,10 @@ class PasswordGateActivity : ComponentActivity() {
         }
     }
 
-    private fun onUnlocked(target: UnlockGrants.Target, grants: UnlockGrants) {
-        grants.grant(target)
+    private fun onUnlocked(target: LockTarget) {
         when (target) {
-            UnlockGrants.Target.SETTINGS -> startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            else -> Toast.makeText(this, "Unlocked for 5 minutes. Try again now.", Toast.LENGTH_LONG).show()
+            LockTarget.SETTINGS -> startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            else -> Toast.makeText(this, "Switched to Normal mode. Try again now.", Toast.LENGTH_LONG).show()
         }
         finish()
     }

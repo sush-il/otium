@@ -99,13 +99,23 @@ fun ModesScreen(onBack: () -> Unit, onOpenEmergency: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ModeCard("Normal", "Change anything freely.", s.mode == Mode.NORMAL)
-            ModeCard("Lock", "Type a long number to change things or uninstall.", s.mode == Mode.LOCK)
+            ModeCard("Lock", "Type a long number to switch to Normal mode and change things.", s.mode == Mode.LOCK)
             ModeCard("Strict", "Locked until it ends. No undo.", s.mode == Mode.STRICT)
 
             when (s.mode) {
                 Mode.NORMAL -> {
+                    if (s.hasLock) {
+                        Button(onClick = vm::relock, modifier = Modifier.fillMaxWidth()) { Text("Turn Lock mode back on") }
+                        s.relockAt?.let { at ->
+                            Text(
+                                "Lock turns back on by itself at " + java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()).toLocalTime().let { "%02d:%02d".format(it.hour, it.minute) } + ".",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                     FilledTonalButton(onClick = { showLockSheet = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Set up Lock mode")
+                        Text(if (s.hasLock) "Set up Lock mode again" else "Set up Lock mode")
                     }
                     FilledTonalButton(onClick = { showStrictSheet = true }, modifier = Modifier.fillMaxWidth()) {
                         Text("Set up Strict mode")
@@ -169,7 +179,7 @@ private fun ModeCard(title: String, body: String, current: Boolean) {
 
 @Composable
 private fun LockSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
-    var length by remember { mutableIntStateOf(20) }
+    var length by remember { mutableIntStateOf(15) }
     var options by remember { mutableStateOf(LockOptions()) }
     // A sample so they feel the cost first; the real numbers are different each time
     var sample by remember(length) { mutableStateOf(NumberChallenges.generate(length)) }
@@ -177,12 +187,12 @@ private fun LockSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
 
     Text("Turn on Lock mode", style = MaterialTheme.typography.titleMedium)
     Text(
-        "To open Settings, loosen limits or uninstall, you'll type a long number shown on screen. " +
+        "To open Settings, loosen limits or uninstall, you'll type a long number shown on screen, which switches you to Normal mode. " +
             "It's different every time. How many digits?",
         style = MaterialTheme.typography.bodyMedium,
     )
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(10, 20, 30, 40).forEach { n ->
+        listOf(10, 15, 20, 30, 40).forEach { n ->
             FilterChip(selected = length == n, onClick = { length = n }, label = { Text("$n") })
         }
     }
@@ -218,12 +228,12 @@ private fun LockActive(vm: ModesViewModel, s: ModeState) {
     var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     Text("Lock mode is on", style = MaterialTheme.typography.titleMedium)
     LockOptionSwitches(s.lock) { new -> pendingAction = { vm.setLockOptions(new) } }
-    OutlinedButton(onClick = { pendingAction = vm::switchToNormal }, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(onClick = { pendingAction = {} }, modifier = Modifier.fillMaxWidth()) {
         Text("Switch to Normal mode")
     }
     pendingAction?.let { action ->
         PasswordDialog(
-            message = "Type the number to make this change.",
+            action = "make this change",
             onUnlocked = {
                 action()
                 pendingAction = null

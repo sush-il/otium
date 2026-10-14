@@ -16,7 +16,6 @@ import com.focusblock.data.db.AppDatabase
 import com.focusblock.service.BlockEngine
 import com.focusblock.service.BlockOverlayController
 import com.focusblock.service.ModeKeeper
-import com.focusblock.service.UnlockGrants
 import com.focusblock.ui.common.EditGuard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,11 +36,10 @@ class AppContainer(context: Context) {
     val settingsStore = SettingsStore(context)
     val installedAppsRepository = InstalledAppsRepository(context, settingsStore)
     val modeStore = ModeStore(context)
-    val unlockGrants = UnlockGrants()
     private val browserRegistry = BrowserRegistry(context)
     private val contentRegistry = ContentRegistry(context)
-    val blockEngine = BlockEngine(context, profileRepository, appLimitRepository, siteLimitRepository, usageRepository, siteUsageTracker, modeStore, settingsStore, browserRegistry, contentRegistry, unlockGrants)
-    val editGuard = EditGuard(modeStore, unlockGrants)
+    val blockEngine = BlockEngine(context, profileRepository, appLimitRepository, siteLimitRepository, usageRepository, siteUsageTracker, modeStore, settingsStore, browserRegistry, contentRegistry)
+    val editGuard = EditGuard(modeStore)
     val backupManager = BackupManager(context, profileRepository, settingsStore)
 
     // Process-wide background work that isn't tied to a screen

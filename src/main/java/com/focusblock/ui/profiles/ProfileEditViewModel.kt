@@ -102,7 +102,6 @@ class ProfileEditViewModel(
     }
 
     fun onPasswordAccepted() {
-        guard.grantProfiles()
         val retry = passwordNeededFor
         passwordNeededFor = null
         retry?.invoke()

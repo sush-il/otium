@@ -85,7 +85,7 @@ fun ProfileListScreen(
     }
     if (vm.passwordNeededFor != null) {
         PasswordDialog(
-            message = "Lock mode: this change needs you to type a number.",
+            action = "make this change",
             onUnlocked = { vm.onPasswordAccepted() },
             onDismiss = vm::dismissPassword,
         )

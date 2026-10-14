@@ -1,13 +1,16 @@
 package com.focusblock.ui.lock
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -18,7 +21,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -27,8 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.focusblock.domain.NumberChallenge
 import com.focusblock.domain.NumberChallenges
+import com.focusblock.domain.model.Mode
+import com.focusblock.service.ModeKeeper
 import com.focusblock.ui.common.appContainer
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 /** Shows a challenge: what the number is, all its digits in groups of five, and where it starts. */
 @OptIn(ExperimentalLayoutApi::class)
@@ -63,11 +71,12 @@ fun DigitsField(value: String, onChange: (String) -> Unit, label: String, maxLen
 
 /**
  * Lock mode's "password": type a fresh number shown on screen. A wrong answer gives a new
- * number, so it can't be retried from memory.
+ * number, so it can't be retried from memory. A correct one switches to Normal mode (optionally
+ * switching Lock back on after an hour) and then runs [onUnlocked], which does the [action].
  */
 @Composable
 fun PasswordForm(
-    message: String,
+    action: String,
     onUnlocked: () -> Unit,
     onForgot: (() -> Unit)?,
 ) {
@@ -77,15 +86,30 @@ fun PasswordForm(
     val challenge = remember(length, attempt) { NumberChallenges.generate(length) }
     var input by remember(attempt) { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    var relock by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(message, style = MaterialTheme.typography.bodyLarge)
+        Text("Type the number to switch to Normal mode and $action.", style = MaterialTheme.typography.bodyLarge)
         ChallengeView(challenge)
         DigitsField(input, { input = it; error = null }, "Type the number", challenge.digits.length, error)
+        Row(Modifier.fillMaxWidth().clickable { relock = !relock }, verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = relock, onCheckedChange = { relock = it })
+            Text("Lock again in 1 hour", style = MaterialTheme.typography.bodyMedium)
+        }
         Button(
             onClick = {
                 if (input == challenge.digits) {
-                    onUnlocked()
+                    scope.launch {
+                        modeStore.update {
+                            if (it.mode == Mode.LOCK) {
+                                it.copy(mode = Mode.NORMAL, relockAt = if (relock) System.currentTimeMillis() + ModeKeeper.RELOCK_MS else null)
+                            } else {
+                                it
+                            }
+                        }
+                        onUnlocked()
+                    }
                 } else {
                     error = "Not quite. Here's a new number."
                     attempt++
@@ -101,11 +125,11 @@ fun PasswordForm(
 }
 
 @Composable
-fun PasswordDialog(message: String, onUnlocked: () -> Unit, onDismiss: () -> Unit) {
+fun PasswordDialog(action: String, onUnlocked: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Type the number to continue") },
-        text = { PasswordForm(message, onUnlocked, onForgot = null) },
+        title = { Text("Lock mode is on") },
+        text = { PasswordForm(action, onUnlocked, onForgot = null) },
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
