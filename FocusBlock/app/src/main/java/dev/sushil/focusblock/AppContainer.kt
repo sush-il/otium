@@ -17,6 +17,7 @@ import dev.sushil.focusblock.ui.common.EditGuard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /** Manual dependency injection: one shared instance of each dependency for the whole app. */
 class AppContainer(context: Context) {
@@ -39,5 +40,8 @@ class AppContainer(context: Context) {
 
     init {
         ModeKeeper(context, modeStore, appScope).start()
+        appScope.launch {
+            settingsStore.dayResetHour.collect { usageRepository.dayResetHour = it }
+        }
     }
 }

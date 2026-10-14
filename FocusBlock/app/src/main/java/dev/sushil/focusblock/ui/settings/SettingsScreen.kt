@@ -10,6 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.AlertDialog
 import java.time.LocalDateTime
 import kotlinx.coroutines.launch
 import dev.sushil.focusblock.domain.model.Mode
@@ -54,6 +60,7 @@ fun SettingsScreen(
     )
     val display by vm.timerDisplay.collectAsStateWithLifecycle()
     val alerts by vm.lowTimeAlerts.collectAsStateWithLifecycle()
+    val resetHour by vm.dayResetHour.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -96,6 +103,34 @@ fun SettingsScreen(
                     Text("Notify at 10, 5 and 1 minute left.", style = MaterialTheme.typography.bodyMedium)
                 }
                 Switch(checked = alerts == true, onCheckedChange = vm::setLowTimeAlerts)
+            }
+
+            var pickingReset by remember { mutableStateOf(false) }
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Day reset time", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "When daily limits and launch counts reset. Default midnight.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                OutlinedButton(onClick = { pickingReset = true }) {
+                    Text("%02d:00".format(resetHour ?: 0))
+                }
+            }
+            if (pickingReset) {
+                val state = rememberTimePickerState(initialHour = resetHour ?: 0, initialMinute = 0, is24Hour = true)
+                AlertDialog(
+                    onDismissRequest = { pickingReset = false },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            vm.setDayResetHour(state.hour)
+                            pickingReset = false
+                        }) { Text("OK") }
+                    },
+                    dismissButton = { TextButton(onClick = { pickingReset = false }) { Text("Cancel") } },
+                    text = { TimePicker(state) },
+                )
             }
 
             Text("Whole-phone blocking", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))

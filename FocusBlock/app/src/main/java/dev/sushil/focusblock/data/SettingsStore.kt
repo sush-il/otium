@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -39,6 +40,9 @@ class SettingsStore(context: Context) {
     val blockFacebookReels: Flow<Boolean> = store.data.map { it[BLOCK_FB_REELS] ?: false }
     val blockAdult: Flow<Boolean> = store.data.map { it[BLOCK_ADULT] ?: false }
 
+    /** Hour (0-23) when the "day" resets for daily limits and launch counts. Default midnight. */
+    val dayResetHour: Flow<Int> = store.data.map { (it[DAY_RESET_HOUR] ?: 0).coerceIn(0, 23) }
+
     suspend fun setTimerDisplay(value: TimerDisplay) {
         store.edit { it[TIMER_DISPLAY] = value.name }
     }
@@ -64,6 +68,8 @@ class SettingsStore(context: Context) {
     suspend fun setBlockFacebookReels(value: Boolean) = store.edit { it[BLOCK_FB_REELS] = value }
     suspend fun setBlockAdult(value: Boolean) = store.edit { it[BLOCK_ADULT] = value }
 
+    suspend fun setDayResetHour(value: Int) = store.edit { it[DAY_RESET_HOUR] = value.coerceIn(0, 23) }
+
     private companion object {
         val TIMER_DISPLAY = stringPreferencesKey("timer_display")
         val LOW_TIME_ALERTS = booleanPreferencesKey("low_time_alerts")
@@ -74,5 +80,6 @@ class SettingsStore(context: Context) {
         val BLOCK_IG_REELS = booleanPreferencesKey("block_instagram_reels")
         val BLOCK_FB_REELS = booleanPreferencesKey("block_facebook_reels")
         val BLOCK_ADULT = booleanPreferencesKey("block_adult")
+        val DAY_RESET_HOUR = intPreferencesKey("day_reset_hour")
     }
 }

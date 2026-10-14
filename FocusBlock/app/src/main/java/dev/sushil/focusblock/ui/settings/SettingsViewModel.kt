@@ -17,11 +17,18 @@ class SettingsViewModel(private val settings: SettingsStore) : ViewModel() {
     val lowTimeAlerts: StateFlow<Boolean?> =
         settings.lowTimeAlerts.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    val dayResetHour: StateFlow<Int?> =
+        settings.dayResetHour.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     fun setTimerDisplay(value: TimerDisplay) {
         viewModelScope.launch { settings.setTimerDisplay(value) }
     }
 
     fun setLowTimeAlerts(value: Boolean) {
         viewModelScope.launch { settings.setLowTimeAlerts(value) }
+    }
+
+    fun setDayResetHour(value: Int) {
+        viewModelScope.launch { settings.setDayResetHour(value) }
     }
 }

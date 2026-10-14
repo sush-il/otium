@@ -5,12 +5,14 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import dev.sushil.focusblock.domain.UsageSource
 import dev.sushil.focusblock.util.Permissions
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 
 /** Usage per app today, read from Android's own records. Returns null without usage access. */
 class UsageRepository(private val context: Context) : UsageSource {
+
+    /** Updated from settings; the hour the usage "day" rolls over. */
+    @Volatile var dayResetHour: Int = 0
 
     private val usageStats = context.getSystemService(UsageStatsManager::class.java)
 
@@ -63,8 +65,12 @@ class UsageRepository(private val context: Context) : UsageSource {
     }
 
     // Recomputed each call: the date/hour can change (midnight, time zone, manual clock change)
-    private fun startOfToday() =
-        LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    private fun startOfToday(): Long {
+        val now = LocalDateTime.now()
+        val resetToday = now.toLocalDate().atTime(dayResetHour, 0)
+        val start = if (now.isBefore(resetToday)) resetToday.minusDays(1) else resetToday
+        return start.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
 
     private fun startOfHour() = LocalDateTime.now().withMinute(0).withSecond(0).withNano(0)
         .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
