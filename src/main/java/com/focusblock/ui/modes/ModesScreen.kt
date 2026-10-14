@@ -180,28 +180,26 @@ private fun ModeCard(title: String, body: String, current: Boolean) {
 
 // ---------- Lock ----------
 
+private const val SAMPLE_DIGITS = 4
+
 @Composable
 private fun LockSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
     var length by remember { mutableIntStateOf(15) }
     var options by remember { mutableStateOf(LockOptions()) }
-    // A sample so they feel the cost first; the real numbers are different each time
-    var sample by remember(length) { mutableStateOf(NumberChallenges.generate(length)) }
-    var typed by remember(length) { mutableStateOf("") }
+    // A short sample to confirm; the real numbers use the length chosen below
+    val sample = remember { NumberChallenges.generate(SAMPLE_DIGITS) }
+    var typed by remember { mutableStateOf("") }
 
     Text("Turn on Lock mode", style = MaterialTheme.typography.titleMedium)
-    Text(
-        "To open Settings, loosen limits or uninstall, you'll type a long number shown on screen, which switches you to Normal mode. " +
-            "It's different every time. How many digits?",
-        style = MaterialTheme.typography.bodyMedium,
-    )
+    Text("To get out of Lock mode you'll type a long number. Try a short one:", style = MaterialTheme.typography.bodyMedium)
+    ChallengeView(sample)
+    DigitsField(typed, { typed = it }, "Type the number", SAMPLE_DIGITS)
+    Text("Digits to unlock later", style = MaterialTheme.typography.labelLarge)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(10, 15, 20, 30, 40).forEach { n ->
             FilterChip(selected = length == n, onClick = { length = n }, label = { Text("$n") })
         }
     }
-    Text("Try one like it. To turn Lock on, type this:", style = MaterialTheme.typography.bodyMedium)
-    ChallengeView(sample)
-    DigitsField(typed, { typed = it }, "Type the number", length)
     LockOptionSwitches(options) { options = it }
     Button(
         onClick = {

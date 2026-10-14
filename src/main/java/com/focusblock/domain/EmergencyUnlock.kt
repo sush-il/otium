@@ -10,13 +10,13 @@ import java.security.SecureRandom
  */
 object EmergencyUnlock {
     const val HOUR_MS = 3_600_000L
-    const val BASE_WAIT_MS = HOUR_MS
+    const val BASE_WAIT_MS = 5 * HOUR_MS
     const val MAX_WAIT_MS = 7 * 24 * HOUR_MS
     const val WINDOW_MS = 15 * 60_000L
     const val HISTORY_MS = 30 * 24 * HOUR_MS
     const val CHALLENGE_LENGTH = 100
 
-    /** 1 hour, doubled for every unlock completed in the last 30 days, capped at 7 days. */
+    /** 5 hours, doubled for every unlock completed in the last 30 days, capped at 7 days. */
     fun waitFor(history: List<Long>, nowMs: Long): Long {
         val recent = history.count { nowMs - it < HISTORY_MS }
         var wait = BASE_WAIT_MS

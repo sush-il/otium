@@ -26,7 +26,8 @@ class NumberChallengeTest {
     }
 
     @Test fun `length is kept within limits`() {
-        assertEquals(NumberChallenges.MIN_LENGTH, NumberChallenges.generate(1).digits.length)
+        assertEquals(4, NumberChallenges.generate(4).digits.length)
+        assertEquals(1, NumberChallenges.generate(0).digits.length)
         assertEquals(NumberChallenges.MAX_LENGTH, NumberChallenges.generate(999).digits.length)
     }
 

@@ -29,12 +29,12 @@ object NumberChallenges {
     )
 
     private val constants = listOf(
-        Constant("π (pi)", "The circle constant: a circle's circumference divided by its width.", MathConstants.PI),
-        Constant("e (Euler's number)", "The base of natural growth, used for compound interest and decay.", MathConstants.E),
-        Constant("√2", "The square root of 2: the diagonal of a square with sides of 1.", MathConstants.SQRT2),
-        Constant("√3", "The square root of 3: the height of an equilateral triangle, doubled.", MathConstants.SQRT3),
-        Constant("φ (the golden ratio)", "(1 + √5) ÷ 2, found in spirals, pentagons and sunflowers.", MathConstants.PHI),
-        Constant("ln 2", "The natural logarithm of 2: how long doubling takes at steady growth.", MathConstants.LN2),
+        Constant("π (pi)", "A circle's circumference ÷ its width.", MathConstants.PI),
+        Constant("e (Euler's number)", "The base of natural growth.", MathConstants.E),
+        Constant("√2", "The diagonal of a 1×1 square.", MathConstants.SQRT2),
+        Constant("√3", "The diagonal of a 1×1×1 cube.", MathConstants.SQRT3),
+        Constant("φ (the golden ratio)", "(1 + √5) ÷ 2, found in spirals and sunflowers.", MathConstants.PHI),
+        Constant("ln 2", "The natural log of 2.", MathConstants.LN2),
     )
 
     private val primes: List<Int> by lazy {
@@ -57,29 +57,29 @@ object NumberChallenges {
 
     private val sequences = listOf(
         Sequence(
-            "The prime numbers", "Numbers divisible only by 1 and themselves, written one after another.",
+            "The prime numbers", "Divisible only by 1 and themselves.",
             0..2_000, { primes[it].toString() }, { "Starts at the ${it + 1}th prime, ${primes[it]}." },
         ),
         Sequence(
-            "The Fibonacci numbers", "Each number is the sum of the two before it: 1, 1, 2, 3, 5, 8…",
+            "The Fibonacci numbers", "Each is the sum of the two before it.",
             5..300, { fibonacci[it].toString() }, { "Starts at the ${it + 1}th Fibonacci number." },
         ),
         Sequence(
-            "Powers of 2", "2, 4, 8, 16… doubling every time, written one after another.",
+            "Powers of 2", "2, 4, 8, 16… doubling each time.",
             1..300, { BigInteger.TWO.pow(it).toString() }, { "Starts at 2 to the power of $it." },
         ),
         Sequence(
-            "Square numbers", "A number multiplied by itself: 1, 4, 9, 16…",
+            "Square numbers", "A number times itself: 1, 4, 9…",
             10..9_000, { (it.toLong() * it).toString() }, { "Starts at $it × $it." },
         ),
         Sequence(
-            "Counting numbers", "Just counting up, with the gaps removed.",
+            "Counting numbers", "Just counting up.",
             10..90_000, { it.toString() }, { "Starts at $it." },
         ),
     )
 
     fun generate(length: Int, random: Random = Random.Default): NumberChallenge {
-        val n = length.coerceIn(MIN_LENGTH, MAX_LENGTH)
+        val n = length.coerceIn(1, MAX_LENGTH)
         val pick = random.nextInt(constants.size + sequences.size)
         if (pick < constants.size) {
             val c = constants[pick]
