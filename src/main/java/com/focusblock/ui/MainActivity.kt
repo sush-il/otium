@@ -8,7 +8,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.focusblock.service.TrackingService
 import com.focusblock.ui.theme.FocusBlockTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,8 +18,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Opening the app is always allowed to start the service, so (re)start it here too
-        TrackingService.start(this)
         openEmergency = intent.getBooleanExtra(EXTRA_EMERGENCY, false)
         setContent {
             FocusBlockTheme {

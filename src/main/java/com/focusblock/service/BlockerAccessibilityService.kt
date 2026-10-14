@@ -2,6 +2,10 @@ package com.focusblock.service
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.focusblock.FocusBlockApp
@@ -10,7 +14,9 @@ import com.focusblock.FocusBlockApp
  * Reports window changes to [BlockEngine] the moment they happen, lends the engine its
  * "go home" action, and reads the browser address bar to block sites and keywords.
  *
- * Android keeps an enabled accessibility service alive and restarts it after reboot.
+ * This is the app's only persistent component: Android keeps an enabled accessibility
+ * service alive (and restarts it after reboot), so the app needs no foreground service
+ * and therefore shows no permanent notification.
  */
 class BlockerAccessibilityService : AccessibilityService() {
 
@@ -19,6 +25,13 @@ class BlockerAccessibilityService : AccessibilityService() {
 
     // Avoid pressing Back many times for one Shorts/Reels screen
     private var lastBackAt = 0L
+
+    // Accessibility events don't fire on screen-off, so we watch for it to reset the timer
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Intent.ACTION_SCREEN_OFF) engine.onScreenOff()
+        }
+    }
 
     override fun onServiceConnected() {
         engine.attachAccessibility(this)
@@ -29,7 +42,7 @@ class BlockerAccessibilityService : AccessibilityService() {
             flags = flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
             notificationTimeout = 300
         }
-        TrackingService.start(this)
+        registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -86,6 +99,7 @@ class BlockerAccessibilityService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
+        runCatching { unregisterReceiver(screenOffReceiver) }
         engine.detachAccessibility(this)
         super.onDestroy()
     }

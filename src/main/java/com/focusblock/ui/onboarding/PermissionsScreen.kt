@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import com.focusblock.service.TrackingService
 import com.focusblock.util.Permissions
 
 /** Snapshot of every permission, re-read each time the user comes back from Settings. */
@@ -68,8 +67,6 @@ fun PermissionsScreen(onDone: () -> Unit) {
     // Notifications are the one runtime permission: a system dialog, not a Settings page
     val notificationRequest = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         state = PermissionState.read(context)
-        // The service was started without its notification showing; start again to show it
-        TrackingService.start(context)
     }
 
     Column(

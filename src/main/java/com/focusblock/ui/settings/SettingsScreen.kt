@@ -81,8 +81,7 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             listOf(
-                TimerDisplay.FLOATING to "Floating timer on screen",
-                TimerDisplay.NOTIFICATION to "Countdown in the notification",
+                TimerDisplay.FLOATING to "Floating arrow on screen",
                 TimerDisplay.HIDDEN to "Hidden",
             ).forEach { (value, label) ->
                 Row(

@@ -13,14 +13,11 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
-    <!-- Tracking service: permanent notification + 300 ms foreground polling -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Low-time alerts (Android 13+). No permanent notification: the app has no foreground service. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- "Display over other apps": lets the polling path open the block screen from the
-         background, and (phase 7) shows the floating timer -->
+    <!-- "Display over other apps": shows the floating time-left arrow and lets the block
+         screen appear from the background -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
@@ -84,15 +81,6 @@
                 android:resource="@xml/accessibility_config" />
         </service>
 
-        <service
-            android:name=".service.TrackingService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Detects the app in front to enforce the user's own app limits" />
-        </service>
-
         <receiver
             android:name=".widget.BlockWidgetProvider"
             android:exported="false">
@@ -102,15 +90,6 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info" />
-        </receiver>
-
-        <receiver
-            android:name=".service.BootReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-            </intent-filter>
         </receiver>
     </application>
 </manifest>

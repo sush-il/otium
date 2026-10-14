@@ -44,9 +44,8 @@ import java.time.format.DateTimeFormatter
 /**
  * The one place that knows which app is in front and whether to block it.
  *
- * Two sources report the foreground app: accessibility events (instant) and the
- * [TrackingService] poller (every 300 ms, catches what events miss). Both call
- * [onForeground]; reports of the app we already know about are ignored.
+ * The accessibility service reports the foreground app via [onForeground]; reports of
+ * the app we already know about are ignored.
  *
  * Main thread only.
  */

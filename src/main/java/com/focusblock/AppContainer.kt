@@ -11,6 +11,7 @@ import com.focusblock.data.SettingsStore
 import com.focusblock.data.UsageRepository
 import com.focusblock.data.db.AppDatabase
 import com.focusblock.service.BlockEngine
+import com.focusblock.service.BlockOverlayController
 import com.focusblock.service.ModeKeeper
 import com.focusblock.service.UnlockGrants
 import com.focusblock.ui.common.EditGuard
@@ -40,6 +41,7 @@ class AppContainer(context: Context) {
 
     init {
         ModeKeeper(context, modeStore, appScope).start()
+        BlockOverlayController(context, blockEngine, settingsStore, appScope).start()
         appScope.launch {
             settingsStore.dayResetHour.collect { usageRepository.dayResetHour = it }
         }
