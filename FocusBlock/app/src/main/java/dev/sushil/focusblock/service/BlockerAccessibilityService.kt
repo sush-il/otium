@@ -8,7 +8,16 @@ import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import dev.sushil.focusblock.BuildConfig
+import dev.sushil.focusblock.FocusBlockApp
+import dev.sushil.focusblock.domain.BlockEvaluator
+import dev.sushil.focusblock.domain.model.BlockDecision
+import dev.sushil.focusblock.domain.model.Profile
 import dev.sushil.focusblock.ui.block.BlockActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
  * Watches which app comes to the front and sends the user away from blocked apps.
@@ -18,8 +27,10 @@ import dev.sushil.focusblock.ui.block.BlockActivity
  */
 class BlockerAccessibilityService : AccessibilityService() {
 
-    // Phase 2: hard-coded. Replaced by profiles from the database in phase 3.
-    private val blockedPackages = setOf("com.android.chrome")
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    // In-memory copy of the rules: events arrive on the main thread, so no DB reads per event
+    @Volatile private var profiles: List<Profile> = emptyList()
 
     private var launcherPackage: String? = null
     private var lastBlockedPackage: String? = null
@@ -28,6 +39,18 @@ class BlockerAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         launcherPackage = resolveLauncherPackage()
         log("connected, launcher=$launcherPackage")
+        val repository = (application as FocusBlockApp).container.profileRepository
+        scope.launch {
+            repository.profiles.collect {
+                profiles = it
+                log("loaded ${it.size} profiles")
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -35,7 +58,8 @@ class BlockerAccessibilityService : AccessibilityService() {
         val pkg = event.packageName?.toString() ?: return
         if (isIgnored(pkg)) return
 
-        if (pkg in blockedPackages) block(pkg, reason = "This app is blocked")
+        val decision = BlockEvaluator.evaluate(pkg, profiles)
+        if (decision is BlockDecision.Blocked) block(pkg, decision.reason)
     }
 
     override fun onInterrupt() = Unit

@@ -1,0 +1,103 @@
+package dev.sushil.focusblock.ui.profiles
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import dev.sushil.focusblock.ui.apps.AppPicker
+import dev.sushil.focusblock.ui.common.AppIcon
+import dev.sushil.focusblock.ui.common.appContainer
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileEditScreen(profileId: Long, onClose: () -> Unit) {
+    val container = appContainer()
+    val vm: ProfileEditViewModel = viewModel(
+        factory = viewModelFactory {
+            initializer { ProfileEditViewModel(profileId, container.profileRepository, container.installedAppsRepository) }
+        },
+    )
+    var pickingApps by rememberSaveable { mutableStateOf(false) }
+
+    // The app picker is part of this screen so the selection lives in one ViewModel
+    if (pickingApps) {
+        BackHandler { pickingApps = false }
+        AppPicker(
+            apps = vm.apps,
+            selected = vm.selected,
+            onToggle = vm::toggleApp,
+            onDone = { pickingApps = false },
+        )
+        return
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(if (vm.isNew) "New profile" else "Edit profile") },
+                navigationIcon = { TextButton(onClick = onClose) { Text("Cancel") } },
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            OutlinedTextField(
+                value = vm.name,
+                onValueChange = { vm.name = it },
+                label = { Text("Name") },
+                placeholder = { Text("e.g. Social media") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Text("Apps (${vm.selected.size})", style = MaterialTheme.typography.titleMedium)
+            val labels = vm.apps?.associate { it.packageName to it.label }.orEmpty()
+            vm.selected.sortedBy { labels[it] ?: it }.forEach { pkg ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    AppIcon(pkg, size = 32.dp)
+                    Text(labels[pkg] ?: pkg)
+                }
+            }
+            OutlinedButton(onClick = { pickingApps = true }) { Text("Choose apps") }
+
+            Button(
+                onClick = { vm.save(onClose) },
+                enabled = vm.canSave,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Save") }
+
+            if (!vm.isNew) {
+                TextButton(onClick = { vm.delete(onClose) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Delete profile", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+    }
+}
