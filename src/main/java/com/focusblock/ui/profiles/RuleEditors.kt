@@ -230,7 +230,7 @@ private fun TimeButton(label: String, minute: Int, onPicked: (Int) -> Unit) {
 
 @Composable
 fun DailyLimitEditor(minutes: Int, onChange: (Int) -> Unit) {
-    DurationPicker("Per day, for each app", minutes, 5, 480, listOf(15, 30, 60, 120, 180, 240), onChange)
+    DurationPicker("Per day, for each app", minutes, 5, 480, listOf(15, 30, 60, 120), onChange)
 }
 
 /** Daily limits can't work without usage access, so point the user to it. */
