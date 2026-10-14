@@ -11,67 +11,69 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /*
- * A curated soft-pastel periwinkle palette. Used directly (not wallpaper-based dynamic
- * colour) so the look stays consistent and gently tinted. Backgrounds are tinted rather
- * than pure black/white, and the surfaceContainer roles give cards quiet layered depth.
+ * Catppuccin palette mapped onto Material 3 roles: Latte for light, Mocha for dark,
+ * with mauve as the accent. Used directly (not wallpaper-based) so the soft, gently
+ * tinted look stays consistent; the surfaceContainer roles give cards quiet depth.
  */
 
-private val PastelLight = lightColorScheme(
-    primary = Color(0xFF5A5FC7),
+// Latte
+private val CatppuccinLight = lightColorScheme(
+    primary = Color(0xFF8839EF), // mauve
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFE2DFFF),
-    onPrimaryContainer = Color(0xFF14134A),
-    secondary = Color(0xFF5D5C72),
+    primaryContainer = Color(0xFFEAD9FF),
+    onPrimaryContainer = Color(0xFF2B0A52),
+    secondary = Color(0xFF1E66F5), // blue
     onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFE3E0F9),
-    onSecondaryContainer = Color(0xFF191A2C),
-    tertiary = Color(0xFF79536A),
-    tertiaryContainer = Color(0xFFFFD8EC),
-    onTertiaryContainer = Color(0xFF2E1125),
-    background = Color(0xFFFBF8FF),
-    onBackground = Color(0xFF1B1B21),
-    surface = Color(0xFFFBF8FF),
-    onSurface = Color(0xFF1B1B21),
-    surfaceVariant = Color(0xFFE4E1EC),
-    onSurfaceVariant = Color(0xFF47464F),
+    secondaryContainer = Color(0xFFDCE4FF),
+    onSecondaryContainer = Color(0xFF0A1C47),
+    tertiary = Color(0xFFEA76CB), // pink
+    tertiaryContainer = Color(0xFFFFD9F0),
+    onTertiaryContainer = Color(0xFF43062F),
+    background = Color(0xFFEFF1F5), // base
+    onBackground = Color(0xFF4C4F69), // text
+    surface = Color(0xFFEFF1F5),
+    onSurface = Color(0xFF4C4F69),
+    surfaceVariant = Color(0xFFCCD0DA), // surface0
+    onSurfaceVariant = Color(0xFF6C6F85), // subtext0
     surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFF5F2FC),
-    surfaceContainer = Color(0xFFEFECF7),
-    surfaceContainerHigh = Color(0xFFEAE6F1),
-    surfaceContainerHighest = Color(0xFFE4E1EC),
-    outline = Color(0xFF78767F),
-    outlineVariant = Color(0xFFC8C5D0),
-    error = Color(0xFFBA1A1A),
-    errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFF410002),
+    surfaceContainerLow = Color(0xFFE6E9EF), // mantle
+    surfaceContainer = Color(0xFFE2E5EC),
+    surfaceContainerHigh = Color(0xFFDCE0E8), // crust-ish
+    surfaceContainerHighest = Color(0xFFD5D9E3),
+    outline = Color(0xFF8C8FA1),
+    outlineVariant = Color(0xFFBCC0CC),
+    error = Color(0xFFD20F39), // red
+    errorContainer = Color(0xFFFFDAD9),
+    onErrorContainer = Color(0xFF410009),
 )
 
-private val PastelDark = darkColorScheme(
-    primary = Color(0xFFC3C4FF),
-    onPrimary = Color(0xFF282A60),
-    primaryContainer = Color(0xFF3F4178),
-    onPrimaryContainer = Color(0xFFE2DFFF),
-    secondary = Color(0xFFC6C4DD),
-    onSecondary = Color(0xFF2E2F42),
-    secondaryContainer = Color(0xFF454559),
-    onSecondaryContainer = Color(0xFFE3E0F9),
-    tertiary = Color(0xFFE9B9D3),
-    tertiaryContainer = Color(0xFF5F3B50),
-    onTertiaryContainer = Color(0xFFFFD8EC),
-    background = Color(0xFF131318),
-    onBackground = Color(0xFFE5E1E9),
-    surface = Color(0xFF131318),
-    onSurface = Color(0xFFE5E1E9),
-    surfaceVariant = Color(0xFF47464F),
-    onSurfaceVariant = Color(0xFFC9C5D0),
-    surfaceContainerLowest = Color(0xFF0E0E13),
-    surfaceContainerLow = Color(0xFF1B1B21),
-    surfaceContainer = Color(0xFF1F1F25),
-    surfaceContainerHigh = Color(0xFF2A2930),
-    surfaceContainerHighest = Color(0xFF35343B),
-    outline = Color(0xFF938F99),
-    outlineVariant = Color(0xFF48464F),
-    error = Color(0xFFFFB4AB),
+// Mocha
+private val CatppuccinDark = darkColorScheme(
+    primary = Color(0xFFCBA6F7), // mauve
+    onPrimary = Color(0xFF2A1A4A),
+    primaryContainer = Color(0xFF45386B),
+    onPrimaryContainer = Color(0xFFEAD9FF),
+    secondary = Color(0xFF89B4FA), // blue
+    onSecondary = Color(0xFF0A2347),
+    secondaryContainer = Color(0xFF2C3C5E),
+    onSecondaryContainer = Color(0xFFDCE4FF),
+    tertiary = Color(0xFFF5C2E7), // pink
+    tertiaryContainer = Color(0xFF5A3350),
+    onTertiaryContainer = Color(0xFFFFD9F0),
+    background = Color(0xFF1E1E2E), // base
+    onBackground = Color(0xFFCDD6F4), // text
+    surface = Color(0xFF1E1E2E),
+    onSurface = Color(0xFFCDD6F4),
+    surfaceVariant = Color(0xFF313244), // surface0
+    onSurfaceVariant = Color(0xFFA6ADC8), // subtext0
+    surfaceContainerLowest = Color(0xFF11111B), // crust
+    surfaceContainerLow = Color(0xFF181825), // mantle
+    surfaceContainer = Color(0xFF232334),
+    surfaceContainerHigh = Color(0xFF313244), // surface0
+    surfaceContainerHighest = Color(0xFF45475A), // surface1
+    outline = Color(0xFF6C7086), // overlay0
+    outlineVariant = Color(0xFF45475A),
+    error = Color(0xFFF38BA8), // red
     errorContainer = Color(0xFF93000A),
     onErrorContainer = Color(0xFFFFDAD6),
 )
@@ -87,6 +89,6 @@ private val AppShapes = Shapes(
 
 @Composable
 fun FocusBlockTheme(content: @Composable () -> Unit) {
-    val colors = if (isSystemInDarkTheme()) PastelDark else PastelLight
+    val colors = if (isSystemInDarkTheme()) CatppuccinDark else CatppuccinLight
     MaterialTheme(colorScheme = colors, shapes = AppShapes, content = content)
 }

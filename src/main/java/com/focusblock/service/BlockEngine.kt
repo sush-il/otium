@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.core.net.toUri
 import com.focusblock.BuildConfig
 import com.focusblock.data.AppLimitRepository
@@ -89,6 +90,8 @@ class BlockEngine(
     val countdown: StateFlow<Countdown?> = _countdown.asStateFlow()
 
     private var lastBlockedPackage: String? = null
+    private var lastRedirectPkg: String? = null
+    private var lastRedirectAt = 0L
     private var lastBlockedAt = 0L
 
     init {
@@ -154,7 +157,7 @@ class BlockEngine(
 
     fun urlBarViewId(pkg: String): String? = browsers.urlBarViewId(pkg)
 
-    /** Browser address-bar text changed: send the user home if it's a blocked site/search. */
+    /** Browser address-bar text changed: move off the page if it's a blocked site/search. */
     fun onBrowserText(pkg: String, text: String) {
         val sites = buildSet {
             addAll(blockedSites)
@@ -166,8 +169,31 @@ class BlockEngine(
         }
         if (sites.isEmpty() && keywords.isEmpty()) return
         val reason = SiteMatcher.blockedReason(text, sites, keywords) ?: return
-        log("blocked browsing in $pkg: $reason")
-        block(pkg, reason)
+        redirectBrowserAway(pkg, reason)
+    }
+
+    /**
+     * Unlike a blocked app (which gets sent home), a blocked site must NOT close the browser:
+     * the browser would just reopen on the same page and loop. Instead we navigate it to a
+     * blank page, like the reference app opening a new tab. The URL bar then no longer matches,
+     * so it won't re-trigger.
+     */
+    private fun redirectBrowserAway(pkg: String, reason: String) {
+        val now = SystemClock.elapsedRealtime()
+        if (pkg == lastRedirectPkg && now - lastRedirectAt < REDIRECT_DEBOUNCE_MS) return
+        lastRedirectPkg = pkg
+        lastRedirectAt = now
+        log("blocked browsing in $pkg: $reason — redirecting")
+        val redirected = runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, "about:blank".toUri())
+                    .setPackage(pkg)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }.isSuccess
+        // If the browser won't take the intent, fall back to pressing Back off the page
+        if (!redirected) accessibility?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+        Toast.makeText(context, reason, Toast.LENGTH_SHORT).show()
     }
 
     fun attachAccessibility(service: AccessibilityService) {
@@ -402,6 +428,7 @@ class BlockEngine(
             "com.samsung.android.packageinstaller",
         )
         const val DEBOUNCE_MS = 1_000L
+        const val REDIRECT_DEBOUNCE_MS = 2_500L
         const val MIN_RECHECK_MS = 1_000L
     }
 }
