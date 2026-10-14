@@ -10,6 +10,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import java.time.LocalDateTime
+import kotlinx.coroutines.launch
+import dev.sushil.focusblock.domain.model.Mode
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import android.widget.Toast
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
@@ -112,6 +121,46 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedButton(onClick = onOpenFeeds) { Text("Feeds & content") }
+
+            val context = LocalContext.current
+            val scope = rememberCoroutineScope()
+            val mode by container.modeStore.state.collectAsStateWithLifecycle(initialValue = null)
+            val backup = container.backupManager
+            val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+                if (uri != null) scope.launch {
+                    runCatching { backup.exportTo(uri) }
+                        .onSuccess { Toast.makeText(context, "Backup saved", Toast.LENGTH_SHORT).show() }
+                        .onFailure { Toast.makeText(context, "Backup failed: ${it.message}", Toast.LENGTH_LONG).show() }
+                }
+            }
+            val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                if (uri != null) scope.launch {
+                    runCatching { backup.importFrom(uri) }
+                        .onSuccess { Toast.makeText(context, "Restored", Toast.LENGTH_SHORT).show() }
+                        .onFailure { Toast.makeText(context, "Restore failed: ${it.message}", Toast.LENGTH_LONG).show() }
+                }
+            }
+            val strictActive = mode?.isStrictActive(LocalDateTime.now(), System.currentTimeMillis()) == true
+
+            Text("Backup", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+            Text(
+                "Save your profiles and settings to a file, or restore them. The password and mode are never included.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(onClick = { exporter.launch("focusblock-backup.json") }) { Text("Back up") }
+                OutlinedButton(onClick = { importer.launch(arrayOf("application/json")) }, enabled = !strictActive) {
+                    Text("Restore")
+                }
+            }
+            if (strictActive) {
+                Text(
+                    "Restore is off while Strict mode is on.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             OutlinedButton(onClick = onOpenSetup, modifier = Modifier.padding(top = 8.dp)) {
                 Text("Permissions & setup")

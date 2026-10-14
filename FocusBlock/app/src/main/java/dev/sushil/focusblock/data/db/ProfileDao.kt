@@ -27,6 +27,9 @@ abstract class ProfileDao {
     @Query("DELETE FROM profiles WHERE id = :id")
     abstract suspend fun delete(id: Long)
 
+    @Query("DELETE FROM profiles")
+    abstract suspend fun deleteAll()
+
     /** Insert or update a profile and replace its apps and schedules, all-or-nothing. */
     @Transaction
     open suspend fun save(

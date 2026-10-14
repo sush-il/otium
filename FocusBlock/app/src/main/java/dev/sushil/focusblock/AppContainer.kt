@@ -2,6 +2,7 @@ package dev.sushil.focusblock
 
 import android.content.Context
 import dev.sushil.focusblock.data.BrowserRegistry
+import dev.sushil.focusblock.data.BackupManager
 import dev.sushil.focusblock.data.ContentRegistry
 import dev.sushil.focusblock.data.InstalledAppsRepository
 import dev.sushil.focusblock.data.ModeStore
@@ -31,6 +32,7 @@ class AppContainer(context: Context) {
     private val contentRegistry = ContentRegistry(context)
     val blockEngine = BlockEngine(context, profileRepository, usageRepository, modeStore, settingsStore, browserRegistry, contentRegistry, unlockGrants)
     val editGuard = EditGuard(modeStore, unlockGrants)
+    val backupManager = BackupManager(context, profileRepository, settingsStore)
 
     // Process-wide background work that isn't tied to a screen
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

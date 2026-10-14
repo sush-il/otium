@@ -10,6 +10,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 /** The only place that knows about Room types; the rest of the app uses [Profile]. */
@@ -18,6 +19,14 @@ class ProfileRepository(private val dao: ProfileDao) {
     val profiles: Flow<List<Profile>> = dao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
     suspend fun get(id: Long): Profile? = dao.get(id)?.toDomain()
+
+    suspend fun all(): List<Profile> = profiles.first()
+
+    /** Used by restore: wipe everything and insert the backed-up profiles fresh. */
+    suspend fun replaceAll(items: List<Profile>) {
+        dao.deleteAll()
+        items.forEach { save(it.copy(id = 0)) }
+    }
 
     suspend fun save(profile: Profile): Long = dao.save(
         profile = ProfileEntity(
