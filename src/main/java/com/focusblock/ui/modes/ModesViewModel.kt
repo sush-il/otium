@@ -3,7 +3,6 @@ package com.focusblock.ui.modes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.focusblock.data.ModeStore
-import com.focusblock.domain.PasswordHasher
 import com.focusblock.domain.model.EmergencyState
 import com.focusblock.domain.model.LockOptions
 import com.focusblock.domain.model.Mode
@@ -22,29 +21,10 @@ class ModesViewModel(private val store: ModeStore) : ViewModel() {
 
     val state: StateFlow<ModeState?> = store.state.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    /**
-     * Hashes the new password and a fresh recovery code. [onReady] gets the code to show
-     * once; Lock mode only turns on when the user confirms they saved it ([confirmLock]).
-     */
-    fun prepareLock(password: String, onReady: (PendingLock) -> Unit) {
+    /** Turns Lock mode on; unlocking will ask for a typing challenge of [length] digits. */
+    fun confirmLock(length: Int, options: LockOptions) {
         viewModelScope.launch {
-            val pending = withContext(Dispatchers.Default) {
-                val code = PasswordHasher.newRecoveryCode()
-                PendingLock(
-                    recoveryCode = code,
-                    passwordHash = PasswordHasher.hash(password),
-                    recoveryHash = PasswordHasher.hash(PasswordHasher.normalizeRecoveryCode(code)),
-                )
-            }
-            onReady(pending)
-        }
-    }
-
-    fun confirmLock(pending: PendingLock, options: LockOptions, pin: Boolean) {
-        viewModelScope.launch {
-            store.update {
-                it.copy(mode = Mode.LOCK, passwordHash = pending.passwordHash, recoveryHash = pending.recoveryHash, pinMode = pin, lock = options)
-            }
+            store.update { it.copy(mode = Mode.LOCK, lockLength = length, lock = options) }
         }
     }
 
@@ -70,5 +50,4 @@ class ModesViewModel(private val store: ModeStore) : ViewModel() {
         }
     }
 
-    data class PendingLock(val recoveryCode: String, val passwordHash: String, val recoveryHash: String)
 }

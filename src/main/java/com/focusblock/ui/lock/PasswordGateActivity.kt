@@ -24,7 +24,7 @@ import com.focusblock.service.UnlockGrants
 import com.focusblock.ui.MainActivity
 import com.focusblock.ui.theme.FocusBlockTheme
 
-/** Lock mode: asks for the password before Settings or uninstalling can be used. */
+/** Lock mode: asks you to type a number before Settings or uninstalling can be used. */
 class PasswordGateActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,8 +38,8 @@ class PasswordGateActivity : ComponentActivity() {
 
         val (title, message) = when (target) {
             UnlockGrants.Target.INSTALLER -> "Uninstalling is locked" to
-                "Enter your Lock mode password. You'll then have 5 minutes to uninstall."
-            else -> "Settings is locked" to "Enter your Lock mode password to open Settings for 5 minutes."
+                "Type the number. You'll then have 5 minutes to uninstall."
+            else -> "Settings is locked" to "Type the number to open Settings for 5 minutes."
         }
         setContent {
             FocusBlockTheme {
@@ -51,7 +51,7 @@ class PasswordGateActivity : ComponentActivity() {
                         Text(title, style = MaterialTheme.typography.headlineMedium)
                         PasswordForm(
                             message = message,
-                            onUnlocked = { result -> onUnlocked(target, result, grants) },
+                            onUnlocked = { onUnlocked(target, grants) },
                             onForgot = {
                                 startActivity(
                                     Intent(this@PasswordGateActivity, MainActivity::class.java)
@@ -68,11 +68,8 @@ class PasswordGateActivity : ComponentActivity() {
         }
     }
 
-    private fun onUnlocked(target: UnlockGrants.Target, result: PasswordResult, grants: UnlockGrants) {
+    private fun onUnlocked(target: UnlockGrants.Target, grants: UnlockGrants) {
         grants.grant(target)
-        if (result == PasswordResult.RECOVERY_CODE) {
-            Toast.makeText(this, "Recovery code accepted. Lock mode is off; set a new password in Modes.", Toast.LENGTH_LONG).show()
-        }
         when (target) {
             UnlockGrants.Target.SETTINGS -> startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             else -> Toast.makeText(this, "Unlocked for 5 minutes. Try again now.", Toast.LENGTH_LONG).show()

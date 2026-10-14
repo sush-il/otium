@@ -38,6 +38,7 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,6 +62,9 @@ import com.focusblock.domain.model.ModeState
 import com.focusblock.domain.model.Schedule
 import com.focusblock.domain.model.StrictOptions
 import com.focusblock.ui.common.appContainer
+import com.focusblock.domain.NumberChallenges
+import com.focusblock.ui.lock.ChallengeView
+import com.focusblock.ui.lock.DigitsField
 import com.focusblock.ui.lock.PasswordDialog
 import com.focusblock.ui.profiles.ScheduleEditor
 import com.focusblock.ui.profiles.summary
@@ -95,7 +99,7 @@ fun ModesScreen(onBack: () -> Unit, onOpenEmergency: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ModeCard("Normal", "Change anything freely.", s.mode == Mode.NORMAL)
-            ModeCard("Lock", "Password-protect changes & uninstall.", s.mode == Mode.LOCK)
+            ModeCard("Lock", "Type a long number to change things or uninstall.", s.mode == Mode.LOCK)
             ModeCard("Strict", "Locked until it ends. No undo.", s.mode == Mode.STRICT)
 
             when (s.mode) {
@@ -165,86 +169,44 @@ private fun ModeCard(title: String, body: String, current: Boolean) {
 
 @Composable
 private fun LockSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
-    var pin by remember { mutableStateOf(true) }
-    var password by remember { mutableStateOf("") }
-    var confirm by remember { mutableStateOf("") }
+    var length by remember { mutableIntStateOf(20) }
     var options by remember { mutableStateOf(LockOptions()) }
-    var pending by remember { mutableStateOf<ModesViewModel.PendingLock?>(null) }
-    var working by remember { mutableStateOf(false) }
+    // A sample so they feel the cost first; the real numbers are different each time
+    var sample by remember(length) { mutableStateOf(NumberChallenges.generate(length)) }
+    var typed by remember(length) { mutableStateOf("") }
 
     Text("Turn on Lock mode", style = MaterialTheme.typography.titleMedium)
+    Text(
+        "To open Settings, loosen limits or uninstall, you'll type a long number shown on screen. " +
+            "It's different every time. How many digits?",
+        style = MaterialTheme.typography.bodyMedium,
+    )
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(selected = pin, onClick = { pin = true; password = ""; confirm = "" }, label = { Text("PIN (numbers)") })
-        FilterChip(selected = !pin, onClick = { pin = false; password = ""; confirm = "" }, label = { Text("Password") })
+        listOf(10, 20, 30, 40).forEach { n ->
+            FilterChip(selected = length == n, onClick = { length = n }, label = { Text("$n") })
+        }
     }
-    val keyboard = KeyboardOptions(keyboardType = if (pin) KeyboardType.NumberPassword else KeyboardType.Password)
-    // PIN: digits only
-    fun clean(v: String) = if (pin) v.filter { it.isDigit() } else v
-    OutlinedTextField(
-        value = password, onValueChange = { password = clean(it) },
-        label = { Text(if (pin) "PIN (4–10 digits)" else "Password (6–10 characters)") }, singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = keyboard,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    OutlinedTextField(
-        value = confirm, onValueChange = { confirm = clean(it) },
-        label = { Text(if (pin) "Confirm PIN" else "Confirm password") }, singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = keyboard,
-        isError = confirm.isNotEmpty() && confirm != password,
-        modifier = Modifier.fillMaxWidth(),
-    )
+    Text("Try one like it. To turn Lock on, type this:", style = MaterialTheme.typography.bodyMedium)
+    ChallengeView(sample)
+    DigitsField(typed, { typed = it }, "Type the number", length)
     LockOptionSwitches(options) { options = it }
-    val valid = password.length in (if (pin) 4..10 else 6..10) && password == confirm
     Button(
         onClick = {
-            working = true
-            vm.prepareLock(password) {
-                working = false
-                pending = it
-            }
+            vm.confirmLock(length, options)
+            onDone()
         },
-        enabled = valid && !working,
+        enabled = typed == sample.digits,
         modifier = Modifier.fillMaxWidth(),
-    ) { Text(if (working) "Preparing…" else "Turn on Lock mode") }
-
-    pending?.let { p ->
-        var saved by remember { mutableStateOf(false) }
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("Save your recovery code") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("If you forget the PIN or password, this code turns Lock mode off. It's shown only once. Write it down somewhere off this phone.")
-                    Text(p.recoveryCode, style = MaterialTheme.typography.headlineSmall, fontFamily = FontFamily.Monospace)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = saved, onCheckedChange = { saved = it })
-                        Text("I've saved it")
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(enabled = saved, onClick = {
-                    vm.confirmLock(p, options, pin)
-                    pending = null
-                    password = ""
-                    confirm = ""
-                    onDone()
-                }) { Text("Turn on") }
-            },
-            dismissButton = { TextButton(onClick = { pending = null }) { Text("Cancel") } },
-        )
-    }
+    ) { Text("Turn on Lock mode") }
 }
 
 @Composable
 private fun LockOptionSwitches(options: LockOptions, onChange: (LockOptions) -> Unit) {
-    OptionSwitch("Password to open Focus Block", options.lockApp) { onChange(options.copy(lockApp = it)) }
-    OptionSwitch("Password to open phone Settings", options.lockSettings) { onChange(options.copy(lockSettings = it)) }
-    OptionSwitch("Password to loosen or delete profiles", options.lockProfiles) { onChange(options.copy(lockProfiles = it)) }
+    OptionSwitch("Number to open Focus Block", options.lockApp) { onChange(options.copy(lockApp = it)) }
+    OptionSwitch("Number to open phone Settings", options.lockSettings) { onChange(options.copy(lockSettings = it)) }
+    OptionSwitch("Number to loosen or delete profiles", options.lockProfiles) { onChange(options.copy(lockProfiles = it)) }
     Text(
-        "Uninstalling always needs the password in Lock mode.",
+        "Uninstalling always needs the number in Lock mode.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -252,7 +214,7 @@ private fun LockOptionSwitches(options: LockOptions, onChange: (LockOptions) -> 
 
 @Composable
 private fun LockActive(vm: ModesViewModel, s: ModeState) {
-    // Every change here loosens Lock mode, so each one asks for the password
+    // Every change here loosens Lock mode, so each one asks for the number
     var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     Text("Lock mode is on", style = MaterialTheme.typography.titleMedium)
     LockOptionSwitches(s.lock) { new -> pendingAction = { vm.setLockOptions(new) } }
@@ -261,7 +223,7 @@ private fun LockActive(vm: ModesViewModel, s: ModeState) {
     }
     pendingAction?.let { action ->
         PasswordDialog(
-            message = "Enter your Lock mode password to make this change.",
+            message = "Type the number to make this change.",
             onUnlocked = {
                 action()
                 pendingAction = null
@@ -452,7 +414,7 @@ private fun EmergencySummary(s: ModeState, onOpen: () -> Unit) {
     Text(
         when (s.emergency.phase) {
             EmergencyState.Phase.IDLE ->
-                "Lost your password or need out early? Takes ${formatHours(EmergencyUnlock.waitFor(s.mode, s.emergency.history, now))} " +
+                "Need out early? Takes ${formatHours(EmergencyUnlock.waitFor(s.mode, s.emergency.history, now))} " +
                     "of phone-on time. Used $recent time(s) in the last 30 days."
             EmergencyState.Phase.WAITING -> "Waiting: ${formatHours(s.emergency.remainingMs)} left."
             EmergencyState.Phase.WINDOW -> "Ready now, for a few minutes."

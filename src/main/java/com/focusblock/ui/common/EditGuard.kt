@@ -24,7 +24,7 @@ class EditGuard(private val modeStore: ModeStore, private val grants: UnlockGran
                 "Strict mode is on. You can add apps, lower limits or create profiles, but not loosen or remove rules.",
             )
         }
-        if (state.isLock && state.lock.lockProfiles && state.passwordHash != null &&
+        if (state.isLock && state.lock.lockProfiles && state.hasLock &&
             !grants.isGranted(UnlockGrants.Target.PROFILES)
         ) {
             return EditCheck.NeedsPassword
@@ -39,7 +39,7 @@ class EditGuard(private val modeStore: ModeStore, private val grants: UnlockGran
         if (state.isStrictActive(LocalDateTime.now(), System.currentTimeMillis())) {
             return EditCheck.Forbidden("Strict mode is on, so profiles can't be paused.")
         }
-        if (state.isLock && state.lock.lockProfiles && state.passwordHash != null &&
+        if (state.isLock && state.lock.lockProfiles && state.hasLock &&
             !grants.isGranted(UnlockGrants.Target.PROFILES)
         ) {
             return EditCheck.NeedsPassword
@@ -53,7 +53,7 @@ class EditGuard(private val modeStore: ModeStore, private val grants: UnlockGran
         if (state.isStrictActive(LocalDateTime.now(), System.currentTimeMillis())) {
             return EditCheck.Forbidden("Strict mode is on, so blocking can't be turned off.")
         }
-        if (state.isLock && state.lock.lockProfiles && state.passwordHash != null &&
+        if (state.isLock && state.lock.lockProfiles && state.hasLock &&
             !grants.isGranted(UnlockGrants.Target.PROFILES)
         ) {
             return EditCheck.NeedsPassword

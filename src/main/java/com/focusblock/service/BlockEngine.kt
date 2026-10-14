@@ -424,7 +424,7 @@ class BlockEngine(
             if (isSettings && state.strict.blockSettings) return Guard.Block("Settings is blocked by Strict mode $until")
             if (pkg == PLAY_STORE && state.strict.blockPlayStore) return Guard.Block("Play Store is blocked by Strict mode $until")
         }
-        if (state.isLock && state.passwordHash != null) {
+        if (state.isLock && state.hasLock) {
             if (isSettings && state.lock.lockSettings && !grants.isGranted(UnlockGrants.Target.SETTINGS)) {
                 return Guard.Password(UnlockGrants.Target.SETTINGS)
             }

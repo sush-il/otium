@@ -51,5 +51,7 @@ object EmergencyUnlock {
     }
 
     fun newChallenge(random: SecureRandom = SecureRandom()): String =
-        (1..CHALLENGE_LENGTH).map { PasswordHasher.ALPHABET[random.nextInt(PasswordHasher.ALPHABET.length)] }.joinToString("")
+        (1..CHALLENGE_LENGTH).map { ALPHABET[random.nextInt(ALPHABET.length)] }.joinToString("")
+
+    private const val ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 }

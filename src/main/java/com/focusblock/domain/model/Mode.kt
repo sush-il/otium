@@ -23,10 +23,8 @@ data class StrictOptions(
 
 data class ModeState(
     val mode: Mode = Mode.NORMAL,
-    val passwordHash: String? = null,
-    val recoveryHash: String? = null,
-    /** True when the Lock password is a numeric PIN, so unlock screens show a number pad. */
-    val pinMode: Boolean = false,
+    /** How many digits the Lock-mode typing challenge has; null until Lock has been set up. */
+    val lockLength: Int? = null,
     val lock: LockOptions = LockOptions(),
     val strict: StrictOptions = StrictOptions(),
     /** Strict ends at this wall-clock time (epoch ms)… */
@@ -36,6 +34,7 @@ data class ModeState(
     val emergency: EmergencyState = EmergencyState(),
 ) {
     val isLock get() = mode == Mode.LOCK
+    val hasLock get() = lockLength != null
 
     fun isStrictActive(now: LocalDateTime, nowMs: Long): Boolean =
         mode == Mode.STRICT &&

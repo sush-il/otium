@@ -51,7 +51,7 @@ fun ProfileEditScreen(profileId: Long, onClose: () -> Unit) {
 
     if (vm.passwordNeededFor != null) {
         PasswordDialog(
-            message = "Lock mode: loosening a profile needs your password.",
+            message = "Lock mode: loosening a profile needs you to type a number.",
             onUnlocked = { vm.onPasswordAccepted() },
             onDismiss = vm::onPasswordDismissed,
         )

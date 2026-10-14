@@ -85,7 +85,7 @@ fun ProfileListScreen(
     }
     if (vm.passwordNeededFor != null) {
         PasswordDialog(
-            message = "Lock mode: this change needs your password.",
+            message = "Lock mode: this change needs you to type a number.",
             onUnlocked = { vm.onPasswordAccepted() },
             onDismiss = vm::dismissPassword,
         )
@@ -158,7 +158,7 @@ private data class ModeInfo(val mode: Mode, val title: String, val body: String)
 
 private val MODE_INFO = listOf(
     ModeInfo(Mode.NORMAL, "Normal Mode", "Change anything and uninstall freely."),
-    ModeInfo(Mode.LOCK, "Lock Mode", "A password protects your settings and changes."),
+    ModeInfo(Mode.LOCK, "Lock Mode", "Typing a long number protects your settings and changes."),
     ModeInfo(Mode.STRICT, "Strict Mode", "Locked until it ends. No undo."),
 )
 

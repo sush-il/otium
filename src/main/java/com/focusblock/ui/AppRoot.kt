@@ -40,7 +40,7 @@ fun AppRoot(openEmergency: Boolean, onEmergencyClosed: () -> Unit) {
     }
 
     val state = mode ?: return // first DataStore read, a few ms
-    val locked = state.isLock && state.lock.lockApp && state.passwordHash != null && !granted
+    val locked = state.isLock && state.lock.lockApp && state.hasLock && !granted
 
     when {
         showEmergency -> EmergencyScreen(onClose = {
@@ -54,7 +54,7 @@ fun AppRoot(openEmergency: Boolean, onEmergencyClosed: () -> Unit) {
             ) {
                 Text("Focus Block is locked", style = MaterialTheme.typography.headlineMedium)
                 PasswordForm(
-                    message = "Enter your Lock mode password.",
+                    message = "Type the number to open Focus Block.",
                     onUnlocked = {
                         container.unlockGrants.grant(UnlockGrants.Target.APP)
                         granted = true

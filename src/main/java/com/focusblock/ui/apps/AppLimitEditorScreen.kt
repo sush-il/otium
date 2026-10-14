@@ -45,7 +45,7 @@ fun AppLimitEditorScreen(packageName: String, onBack: () -> Unit) {
         )
     }
     if (vm.passwordNeededFor != null) {
-        PasswordDialog("Lock mode: removing a limit needs your password.", { vm.onPasswordAccepted() }, vm::dismissPassword)
+        PasswordDialog("Lock mode: removing a limit needs you to type a number.", { vm.onPasswordAccepted() }, vm::dismissPassword)
     }
 
     LimitEditorLayout(

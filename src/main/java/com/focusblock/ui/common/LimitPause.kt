@@ -89,7 +89,7 @@ fun PauseDialogs(pause: LimitPause) {
         )
     }
     if (pause.passwordNeededFor != null) {
-        PasswordDialog("Lock mode: pausing blocking needs your password.", { pause.onPasswordAccepted() }, { pause.passwordNeededFor = null })
+        PasswordDialog("Lock mode: pausing blocking needs you to type a number.", { pause.onPasswordAccepted() }, { pause.passwordNeededFor = null })
     }
 }
 
