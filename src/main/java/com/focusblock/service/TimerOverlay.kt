@@ -59,17 +59,11 @@ class TimerOverlay(private val context: Context) {
 
     private fun render() {
         val v = view ?: createView().also { view = it }
-        if (!expanded) {
-            // Collapsed: a bigger arrow that's easy to see and tap
-            v.text = "›"
-            v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-            v.setPadding(dp(12), dp(16), dp(14), dp(16))
-        } else {
-            // Expanded: just the time (you're already in the app, so no name needed)
-            v.text = "${formatCountdown(lastRemaining)} ‹"
-            v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            v.setPadding(dp(14), dp(12), dp(14), dp(12))
-        }
+        // Constant text size and vertical padding, so only the WIDTH changes, never the height
+        v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+        v.setPadding(dp(13), dp(13), dp(16), dp(13))
+        // Collapsed: just an arrow. Expanded: the time (you're already in the app, no name needed).
+        v.text = if (!expanded) "›" else "${formatCountdown(lastRemaining)} ‹"
     }
 
     @SuppressLint("ClickableViewAccessibility")

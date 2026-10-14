@@ -270,8 +270,10 @@ class BlockEngine(
     }
 
     fun onForeground(pkg: String) {
-        // Notification shade or keyboard on top: the app underneath is still in front
-        if (pkg == SYSTEM_UI || pkg == currentKeyboardPackage()) return
+        // Notification shade or keyboard on top: the app underneath is still in front.
+        // Google Play services pops brief windows (common in YouTube/ReVanced); ignoring it
+        // stops the timer flickering off and back on.
+        if (pkg == SYSTEM_UI || pkg == currentKeyboardPackage() || pkg.endsWith(".gms")) return
         // Leaving the browser ends the site session (stops counting its time)
         if (pkg != currentSitePkg) clearCurrentSite()
         if (pkg == current) return
@@ -292,8 +294,13 @@ class BlockEngine(
     private fun startWatching(pkg: String) {
         checkJob?.cancel()
         checkJob = null
-        _countdown.value = null
-        if (pkg == context.packageName || pkg == launcherPackage()) return
+        if (pkg == context.packageName || pkg == launcherPackage()) {
+            // No app to judge here, so there's nothing to count down
+            _countdown.value = null
+            return
+        }
+        // Don't null the countdown here: watch() sets it on its first pass, so re-watching
+        // the same limited app (e.g. after a settings change) won't blink the timer off.
         checkJob = scope.launch { watch(pkg) }
     }
 

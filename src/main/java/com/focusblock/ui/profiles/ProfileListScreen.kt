@@ -176,12 +176,12 @@ private fun ModeCarousel(mode: Mode?, onOpenModes: () -> Unit) {
             val info = MODE_INFO[page]
             val isCurrent = info.mode == current
             Card(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenModes),
+                modifier = Modifier.fillMaxWidth().height(128.dp).clickable(onClick = onOpenModes),
                 colors = CardDefaults.cardColors(
                     containerColor = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
                 ),
             ) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(info.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                         if (isCurrent) Text("● Active", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)

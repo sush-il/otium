@@ -76,7 +76,7 @@ fun AppNavHost() {
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
-                    modifier = Modifier.height(64.dp),
+                    modifier = Modifier.height(72.dp),
                     containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 0.dp,
                 ) {
