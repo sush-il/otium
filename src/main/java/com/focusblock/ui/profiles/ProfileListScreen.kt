@@ -29,6 +29,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -115,7 +118,7 @@ fun ProfileListScreen(
         ) {
             if (!blockerReady) item { BlockerOffBanner(onOpenSetup) }
 
-            item { ModeCard(mode, onOpenModes) }
+            item { ModeCarousel(mode, onOpenModes) }
 
             item { SectionHeader("Quick Actions") }
             item { QuickActions(vm, onOpenApps, onOpenSites, onOpenFeeds) }
@@ -150,51 +153,53 @@ private fun SectionHeader(text: String) {
     )
 }
 
+private data class ModeInfo(val mode: Mode, val title: String, val body: String)
+
+private val MODE_INFO = listOf(
+    ModeInfo(Mode.NORMAL, "Normal Mode", "Change anything and uninstall freely."),
+    ModeInfo(Mode.LOCK, "Lock Mode", "A password protects your settings and changes."),
+    ModeInfo(Mode.STRICT, "Strict Mode", "Locked until it ends. No undo."),
+)
+
+/** Swipeable cards for all three modes (browsing only — doesn't change the mode). */
 @Composable
-private fun ModeCard(mode: Mode?, onOpenModes: () -> Unit) {
-    val level = when (mode) {
-        Mode.LOCK -> 2
-        Mode.STRICT -> 3
-        else -> 1
-    }
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenModes),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    when (mode) {
-                        Mode.LOCK -> "Lock Mode"
-                        Mode.STRICT -> "Strict Mode"
-                        else -> "Normal Mode"
-                    },
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                )
-                // Strictness level: filled pips grow with the mode
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    repeat(3) { i ->
-                        Box(
-                            Modifier.size(10.dp).background(
-                                if (i < level) MaterialTheme.colorScheme.onPrimaryContainer
-                                else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.25f),
-                                CircleShape,
-                            ),
-                        )
+private fun ModeCarousel(mode: Mode?, onOpenModes: () -> Unit) {
+    val current = mode ?: Mode.NORMAL
+    val currentIndex = MODE_INFO.indexOfFirst { it.mode == current }.coerceAtLeast(0)
+    val pager = rememberPagerState(initialPage = currentIndex) { MODE_INFO.size }
+
+    // Follow the actual mode when it changes elsewhere (not when the user just swipes)
+    LaunchedEffect(currentIndex) { pager.animateScrollToPage(currentIndex) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HorizontalPager(state = pager, pageSpacing = 12.dp) { page ->
+            val info = MODE_INFO[page]
+            val isCurrent = info.mode == current
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenModes),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                ),
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(info.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        if (isCurrent) Text("● Active", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     }
+                    Text(info.body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Tap to manage", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 }
             }
-            Text(
-                when (mode) {
-                    Mode.LOCK -> "A password protects your settings. Tap to manage."
-                    Mode.STRICT -> "Locked until Strict ends. Tap to manage."
-                    else -> "Make any changes and uninstall the app freely. Tap to change."
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            repeat(MODE_INFO.size) { i ->
+                Box(
+                    Modifier.padding(horizontal = 3.dp).size(if (pager.currentPage == i) 8.dp else 6.dp).background(
+                        if (pager.currentPage == i) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                        CircleShape,
+                    ),
+                )
+            }
         }
     }
 }
