@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import dev.sushil.focusblock.domain.model.RuleType
 import dev.sushil.focusblock.ui.apps.AppPicker
 import dev.sushil.focusblock.ui.common.AppIcon
 import dev.sushil.focusblock.ui.common.appContainer
@@ -76,6 +77,14 @@ fun ProfileEditScreen(profileId: Long, onClose: () -> Unit) {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            Text("Rule", style = MaterialTheme.typography.titleMedium)
+            RuleTypeSelector(vm.type) { vm.type = it }
+            when (vm.type) {
+                RuleType.ALWAYS -> Text("These apps are blocked whenever the profile is on.")
+                RuleType.SCHEDULE -> ScheduleEditor(vm.schedule, onToggleDay = vm::toggleDay, onChange = { vm.schedule = it })
+                RuleType.DAILY_LIMIT -> DailyLimitEditor(vm.dailyLimitMinutes) { vm.dailyLimitMinutes = it }
+            }
 
             Text("Apps (${vm.selected.size})", style = MaterialTheme.typography.titleMedium)
             val labels = vm.apps?.associate { it.packageName to it.label }.orEmpty()

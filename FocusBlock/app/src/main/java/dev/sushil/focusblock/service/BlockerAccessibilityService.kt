@@ -9,15 +9,20 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import dev.sushil.focusblock.BuildConfig
 import dev.sushil.focusblock.FocusBlockApp
+import dev.sushil.focusblock.data.UsageRepository
 import dev.sushil.focusblock.domain.BlockEvaluator
 import dev.sushil.focusblock.domain.model.BlockDecision
 import dev.sushil.focusblock.domain.model.Profile
 import dev.sushil.focusblock.ui.block.BlockActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.LocalDateTime
 
 /**
  * Watches which app comes to the front and sends the user away from blocked apps.
@@ -28,6 +33,7 @@ import kotlinx.coroutines.launch
 class BlockerAccessibilityService : AccessibilityService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private lateinit var usage: UsageRepository
 
     // In-memory copy of the rules: events arrive on the main thread, so no DB reads per event
     @Volatile private var profiles: List<Profile> = emptyList()
@@ -36,12 +42,16 @@ class BlockerAccessibilityService : AccessibilityService() {
     private var lastBlockedPackage: String? = null
     private var lastBlockedAt = 0L
 
+    // Checks the app in front now, then again whenever its rules say it may become blocked
+    private var checkJob: Job? = null
+
     override fun onServiceConnected() {
         launcherPackage = resolveLauncherPackage()
+        val container = (application as FocusBlockApp).container
+        usage = container.usageRepository
         log("connected, launcher=$launcherPackage")
-        val repository = (application as FocusBlockApp).container.profileRepository
         scope.launch {
-            repository.profiles.collect {
+            container.profileRepository.profiles.collect {
                 profiles = it
                 log("loaded ${it.size} profiles")
             }
@@ -56,13 +66,36 @@ class BlockerAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
-        if (isIgnored(pkg)) return
+        // Notification shade or keyboard on top: the app underneath is still in front
+        if (pkg == SYSTEM_UI || pkg == currentKeyboardPackage()) return
 
-        val decision = BlockEvaluator.evaluate(pkg, profiles)
-        if (decision is BlockDecision.Blocked) block(pkg, decision.reason)
+        checkJob?.cancel()
+        if (pkg == packageName || pkg == launcherPackage) return
+        checkJob = scope.launch { watch(pkg) }
     }
 
     override fun onInterrupt() = Unit
+
+    /** Runs while [pkg] stays in front; cancelled as soon as another app comes up. */
+    private suspend fun watch(pkg: String) {
+        while (true) {
+            val usedToday = { p: String -> usage.usedTodayMs(p) }
+            // Reading usage stats is a slow system call, keep it off the main thread
+            val (decision, recheckIn) = withContext(Dispatchers.Default) {
+                val now = LocalDateTime.now()
+                BlockEvaluator.evaluate(pkg, now, profiles, usedToday) to
+                    BlockEvaluator.nextRecheck(pkg, now, profiles, usedToday)
+            }
+            if (decision is BlockDecision.Blocked) {
+                block(pkg, decision.reason)
+                return
+            }
+            if (recheckIn == null) return
+            log("recheck $pkg in ${recheckIn.seconds}s")
+            // Usage stats can lag a little, so never spin faster than once a second
+            delay(recheckIn.toMillis().coerceAtLeast(MIN_RECHECK_MS))
+        }
+    }
 
     private fun block(pkg: String, reason: String) {
         // One app can fire several window events while opening; only react once
@@ -71,7 +104,7 @@ class BlockerAccessibilityService : AccessibilityService() {
         lastBlockedPackage = pkg
         lastBlockedAt = now
 
-        log("blocking $pkg")
+        log("blocking $pkg: $reason")
         performGlobalAction(GLOBAL_ACTION_HOME)
         startActivity(
             Intent(this, BlockActivity::class.java)
@@ -80,13 +113,6 @@ class BlockerAccessibilityService : AccessibilityService() {
                 .putExtra(BlockActivity.EXTRA_REASON, reason),
         )
     }
-
-    // Never block ourselves, the system UI, the home screen or the keyboard
-    private fun isIgnored(pkg: String): Boolean =
-        pkg == packageName ||
-            pkg == "com.android.systemui" ||
-            pkg == launcherPackage ||
-            pkg == currentKeyboardPackage()
 
     private fun currentKeyboardPackage(): String? =
         Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
@@ -104,6 +130,8 @@ class BlockerAccessibilityService : AccessibilityService() {
 
     private companion object {
         const val TAG = "FocusBlock"
+        const val SYSTEM_UI = "com.android.systemui"
         const val DEBOUNCE_MS = 1_000L
+        const val MIN_RECHECK_MS = 1_000L
     }
 }

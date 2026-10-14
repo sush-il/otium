@@ -32,10 +32,12 @@ import dev.sushil.focusblock.util.Permissions
 fun PermissionsScreen(onDone: () -> Unit) {
     val context = LocalContext.current
     var accessibilityOn by remember { mutableStateOf(Permissions.isAccessibilityEnabled(context)) }
+    var usageAccessOn by remember { mutableStateOf(Permissions.hasUsageAccess(context)) }
 
     // The user grants permissions in system Settings, so re-check whenever we come back
     LifecycleResumeEffect(Unit) {
         accessibilityOn = Permissions.isAccessibilityEnabled(context)
+        usageAccessOn = Permissions.hasUsageAccess(context)
         onPauseOrDispose { }
     }
 
@@ -62,6 +64,14 @@ fun PermissionsScreen(onDone: () -> Unit) {
             done = accessibilityOn,
             action = "Open Accessibility settings",
             intent = Permissions.accessibilitySettingsIntent(),
+        )
+
+        Step(
+            title = "Optional: Usage access",
+            body = "Only needed for daily time limits. Find Focus Block in the list and allow it.",
+            done = usageAccessOn,
+            action = "Open Usage access",
+            intent = Permissions.usageAccessIntent(),
         )
 
         Button(onClick = onDone, enabled = accessibilityOn, modifier = Modifier.fillMaxWidth()) {
