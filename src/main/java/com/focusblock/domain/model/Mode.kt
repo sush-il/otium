@@ -9,7 +9,7 @@ enum class Mode { NORMAL, LOCK, STRICT }
 /** What the Lock-mode password protects. */
 data class LockOptions(
     val lockApp: Boolean = false,
-    val lockSettings: Boolean = true,
+    val lockSettings: Boolean = false,
     val lockProfiles: Boolean = true,
 )
 

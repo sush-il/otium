@@ -436,12 +436,16 @@ class BlockEngine(
     private fun showPasswordGate(pkg: String, target: LockTarget) {
         current = null
         log("password needed for $pkg ($target)")
-        goHome()
-        context.startActivity(
-            Intent(context, PasswordGateActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                .putExtra(PasswordGateActivity.EXTRA_TARGET, target.name),
-        )
+        // Open the gate over the app. No "go home" first: it lands a moment later and would
+        // cover the gate (see block()). The gate goes home when cancelled.
+        val shown = runCatching {
+            context.startActivity(
+                Intent(context, PasswordGateActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    .putExtra(PasswordGateActivity.EXTRA_TARGET, target.name),
+            )
+        }.isSuccess
+        if (!shown) goHome()
     }
 
     private fun goHome() {
