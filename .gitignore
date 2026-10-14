@@ -1,0 +1,19 @@
+# Reference material: copyrighted APK and decompiled output, never committed
+reference/*.apk
+reference/jadx-out/
+
+# Android / Gradle
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+.kotlin/
+captures/
+*.jks
+*.keystore
+
+# OS / editor
+.DS_Store
+*:sec.endpointdlp
+.zed/
