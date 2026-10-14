@@ -22,6 +22,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -67,18 +73,48 @@ fun RuleTypeSelector(type: RuleType, onChange: (RuleType) -> Unit) {
     }
 }
 
-/** Minutes slider shared by the time-limit rules. */
+/** Hourly limit picker (5–55 min). */
 @Composable
 fun MinutesLimitEditor(label: String, minutes: Int, max: Int, onChange: (Int) -> Unit) {
-    Column {
-        Text("$label: $minutes min", style = MaterialTheme.typography.bodyLarge)
+    DurationPicker(label, minutes, 5, max, listOf(5, 10, 15, 30, 45), onChange)
+}
+
+/**
+ * Duration picker: big readable value, − / + buttons for exact 5-minute steps,
+ * quick presets, and a slider for coarse moves. Shows hours once over 59 min.
+ */
+@Composable
+fun DurationPicker(label: String, minutes: Int, min: Int, max: Int, presets: List<Int>, onChange: (Int) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            FilledTonalIconButton(onClick = { onChange((minutes - 5).coerceAtLeast(min)) }) { Text("−", style = MaterialTheme.typography.titleLarge) }
+            Text(formatDuration(minutes), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+            FilledTonalIconButton(onClick = { onChange((minutes + 5).coerceAtMost(max)) }) { Icon(Icons.Default.Add, "More") }
+        }
         Slider(
             value = minutes.toFloat(),
-            onValueChange = { onChange((it / 5).roundToInt() * 5) },
-            valueRange = 5f..max.toFloat(),
-            steps = (max - 5) / 5 - 1,
+            onValueChange = { onChange(((it / 5).roundToInt() * 5).coerceIn(min, max)) },
+            valueRange = min.toFloat()..max.toFloat(),
+            steps = (max - min) / 5 - 1,
         )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            presets.forEach { p ->
+                FilterChip(selected = minutes == p, onClick = { onChange(p) }, label = { Text(formatDuration(p)) })
+            }
+        }
         UsageAccessWarning()
+    }
+}
+
+/** 45 → "45 min", 60 → "1 h", 90 → "1 h 30 min". */
+fun formatDuration(minutes: Int): String {
+    val h = minutes / 60
+    val m = minutes % 60
+    return when {
+        h == 0 -> "$m min"
+        m == 0 -> "$h h"
+        else -> "$h h $m min"
     }
 }
 
@@ -194,17 +230,7 @@ private fun TimeButton(label: String, minute: Int, onPicked: (Int) -> Unit) {
 
 @Composable
 fun DailyLimitEditor(minutes: Int, onChange: (Int) -> Unit) {
-    Column {
-        Text("$minutes min per day, for each app", style = MaterialTheme.typography.bodyLarge)
-        // 5 min to 4 h in 5-minute steps
-        Slider(
-            value = minutes.toFloat(),
-            onValueChange = { onChange((it / 5).roundToInt() * 5) },
-            valueRange = 5f..240f,
-            steps = (240 - 5) / 5 - 1,
-        )
-        UsageAccessWarning()
-    }
+    DurationPicker("Per day, for each app", minutes, 5, 480, listOf(15, 30, 60, 120, 180, 240), onChange)
 }
 
 /** Daily limits can't work without usage access, so point the user to it. */

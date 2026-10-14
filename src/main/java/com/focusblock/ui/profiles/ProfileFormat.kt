@@ -13,8 +13,8 @@ private const val WEEKENDS = 0b1100000
 fun Profile.summary(): String = when (type) {
     RuleType.ALWAYS -> "Always blocked"
     RuleType.SCHEDULE -> schedules.joinToString { it.summary() }.ifEmpty { "No schedule" }
-    RuleType.DAILY_LIMIT -> "${dailyLimitMinutes ?: 0} min per day"
-    RuleType.HOURLY_LIMIT -> "${hourlyLimitMinutes ?: 0} min per hour"
+    RuleType.DAILY_LIMIT -> "${formatDuration(dailyLimitMinutes ?: 0)} per day"
+    RuleType.HOURLY_LIMIT -> "${formatDuration(hourlyLimitMinutes ?: 0)} per hour"
     RuleType.LAUNCH_LIMIT -> "${launchLimit ?: 0} opens per day"
     RuleType.BLOCK_UNTIL -> blockUntil?.let { "Blocked until ${it.toLocalDate()}" } ?: "Blocked until a date"
 }
