@@ -359,7 +359,7 @@ class BlockEngine(
                     )
                 } else {
                     // Master app-blocking switch off → nothing app-based blocks
-                    val rules = if (!appBlockingEnabled) emptyList() else profiles + appLimitProfiles
+                    val rules = if (!appBlockingEnabled) emptyList() else profiles + appLimitProfiles.filter { p -> p.packages.none { "app:$it" in pausedLimits } }
                     val cached = CachingUsageSource(usage) // read each usage value at most once
                     val excluded = wholePhoneExcluded()
                     Triple(
