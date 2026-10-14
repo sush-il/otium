@@ -8,6 +8,15 @@ import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.runtime.remember
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.WindowInsets
 import kotlinx.coroutines.delay
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.LaunchedEffect
@@ -88,32 +97,44 @@ class BlockActivity : ComponentActivity() {
 
     @Composable
     private fun BlockScreen(blocked: Blocked, onGoHome: () -> Unit) {
-        // Auto-dismiss so it never feels stuck; the button is there if they want it sooner
+        // A line chosen once per block; a gentle nudge, nothing preachy
+        val line = remember(blocked) { LINES.random() }
+        // Fallback auto-dismiss so it never gets stuck if they walk away
         LaunchedEffect(blocked) {
-            delay(4000)
+            delay(10_000)
             onGoHome()
         }
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        val scheme = MaterialTheme.colorScheme
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(listOf(scheme.primaryContainer, scheme.background, scheme.background)),
+            ),
+        ) {
+            // X to dismiss, top-right
+            IconButton(
+                onClick = onGoHome,
+                modifier = Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(8.dp),
+            ) { Icon(Icons.Default.Close, contentDescription = "Dismiss") }
+
             Column(
-                modifier = Modifier.fillMaxSize().padding(32.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
+                modifier = Modifier.fillMaxSize().padding(40.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(
-                    Modifier.size(96.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                    Modifier.size(84.dp).background(scheme.primary.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    blocked.icon?.let { Image(it, contentDescription = null, modifier = Modifier.size(56.dp)) }
+                    blocked.icon?.let { Image(it, contentDescription = null, modifier = Modifier.size(48.dp)) }
                         ?: Text("🚫", style = MaterialTheme.typography.displaySmall)
                 }
-                Text("Blocked", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                Text(line, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 Text(
-                    blocked.label,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    "${blocked.label} · ${blocked.reason}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = scheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                 )
-                Text(blocked.reason, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
-                Button(onClick = onGoHome) { Text("Go home") }
             }
         }
     }
@@ -121,5 +142,17 @@ class BlockActivity : ComponentActivity() {
     companion object {
         const val EXTRA_PACKAGE = "package"
         const val EXTRA_REASON = "reason"
+
+        // Short original nudges shown on the block screen
+        private val LINES = listOf(
+            "Your time, back in your hands.",
+            "The scroll can wait.",
+            "Nothing important is on that feed.",
+            "Come back to what matters.",
+            "Small nos build a big yes.",
+            "You set this. Good call.",
+            "Focus is a gift you give yourself.",
+            "Take the moment back.",
+        )
     }
 }
