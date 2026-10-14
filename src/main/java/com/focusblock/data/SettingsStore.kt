@@ -54,6 +54,9 @@ class SettingsStore(context: Context) {
     val reelsBlockingEnabled: Flow<Boolean> =
         combine(blockYoutubeShorts, blockInstagramReels, blockFacebookReels) { yt, ig, fb -> yt || ig || fb }
 
+    /** Whether the app picker also lists system apps. Off by default. */
+    val showSystemApps: Flow<Boolean> = store.data.map { it[SHOW_SYSTEM_APPS] ?: false }
+
     /** Hour (0-23) when the "day" resets for daily limits and launch counts. Default midnight. */
     val dayResetHour: Flow<Int> = store.data.map { (it[DAY_RESET_HOUR] ?: 0).coerceIn(0, 23) }
 
@@ -93,6 +96,7 @@ class SettingsStore(context: Context) {
         it[BLOCK_FB_REELS] = value
     }
 
+    suspend fun setShowSystemApps(value: Boolean) = store.edit { it[SHOW_SYSTEM_APPS] = value }
     suspend fun setDayResetHour(value: Int) = store.edit { it[DAY_RESET_HOUR] = value.coerceIn(0, 23) }
 
     private companion object {
@@ -108,6 +112,7 @@ class SettingsStore(context: Context) {
         val QUICK_BLOCKED_APPS = stringSetPreferencesKey("quick_blocked_apps")
         val APP_BLOCKING = booleanPreferencesKey("app_blocking_enabled")
         val KEYWORD_BLOCKING = booleanPreferencesKey("keyword_blocking_enabled")
+        val SHOW_SYSTEM_APPS = booleanPreferencesKey("show_system_apps")
         val DAY_RESET_HOUR = intPreferencesKey("day_reset_hour")
     }
 }

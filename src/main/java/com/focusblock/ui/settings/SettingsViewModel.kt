@@ -20,6 +20,9 @@ class SettingsViewModel(private val settings: SettingsStore) : ViewModel() {
     val dayResetHour: StateFlow<Int?> =
         settings.dayResetHour.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    val showSystemApps: StateFlow<Boolean?> =
+        settings.showSystemApps.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     fun setTimerDisplay(value: TimerDisplay) {
         viewModelScope.launch { settings.setTimerDisplay(value) }
     }
@@ -30,5 +33,9 @@ class SettingsViewModel(private val settings: SettingsStore) : ViewModel() {
 
     fun setDayResetHour(value: Int) {
         viewModelScope.launch { settings.setDayResetHour(value) }
+    }
+
+    fun setShowSystemApps(value: Boolean) {
+        viewModelScope.launch { settings.setShowSystemApps(value) }
     }
 }

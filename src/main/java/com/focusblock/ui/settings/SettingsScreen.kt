@@ -58,6 +58,7 @@ fun SettingsScreen(
     val display by vm.timerDisplay.collectAsStateWithLifecycle()
     val alerts by vm.lowTimeAlerts.collectAsStateWithLifecycle()
     val resetHour by vm.dayResetHour.collectAsStateWithLifecycle()
+    val showSystem by vm.showSystemApps.collectAsStateWithLifecycle()
     val mode by container.modeStore.state.collectAsStateWithLifecycle(initialValue = null)
 
     val context = LocalContext.current
@@ -94,6 +95,8 @@ fun SettingsScreen(
                     NavRow("🌐", "Websites & keywords", null, onOpenWebContent)
                     Divider()
                     NavRow("🎬", "Feeds & content", "Shorts, Reels, adult", onOpenFeeds)
+                    Divider()
+                    SwitchRow("Show system apps", "In the app picker", showSystem == true, vm::setShowSystemApps)
                 }
             }
 
