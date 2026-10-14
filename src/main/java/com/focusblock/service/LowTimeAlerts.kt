@@ -25,9 +25,11 @@ class LowTimeAlerts(private val context: Context) {
     fun pendingThresholds(pkg: String, remainingMs: Long): List<Int> =
         THRESHOLDS_MIN.filter { remainingMs > it * 60_000L && key(pkg, it) !in sent }
 
+    /** Marks a threshold as handled; returns false if it was already handled. */
+    fun markIfNew(pkg: String, minutes: Int): Boolean = sent.add(key(pkg, minutes))
+
     @SuppressLint("MissingPermission") // checked via Permissions.hasNotificationPermission
     fun send(pkg: String, appLabel: String, minutes: Int) {
-        if (!sent.add(key(pkg, minutes))) return
         if (!Permissions.hasNotificationPermission(context)) return
         val text = if (minutes == 1) "1 minute left on $appLabel" else "$minutes minutes left on $appLabel"
         NotificationManagerCompat.from(context).notify(

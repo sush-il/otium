@@ -24,6 +24,7 @@ class BlockOverlayController(
     private val scope: CoroutineScope,
 ) {
     private val overlay = TimerOverlay(context)
+    private val alertOverlay = AlertOverlay(context)
     private val alerts = LowTimeAlerts(context)
 
     fun start() {
@@ -48,7 +49,13 @@ class BlockOverlayController(
             if (alertsOn) launch {
                 for (minutes in alerts.pendingThresholds(countdown.pkg, countdown.remainingMs())) {
                     delay(countdown.remainingMs() - minutes * 60_000L)
-                    alerts.send(countdown.pkg, label, minutes)
+                    if (!alerts.markIfNew(countdown.pkg, minutes)) continue
+                    // Prefer a big on-screen flash; fall back to a notification without overlay access
+                    if (Permissions.canDrawOverlays(context)) {
+                        alertOverlay.flash("$minutes min left")
+                    } else {
+                        alerts.send(countdown.pkg, label, minutes)
+                    }
                 }
             }
             if (wantOverlay) launch {
