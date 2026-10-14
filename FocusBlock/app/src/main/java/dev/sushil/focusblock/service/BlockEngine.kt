@@ -13,6 +13,7 @@ import dev.sushil.focusblock.data.ModeStore
 import dev.sushil.focusblock.data.ProfileRepository
 import dev.sushil.focusblock.data.UsageRepository
 import dev.sushil.focusblock.domain.BlockEvaluator
+import dev.sushil.focusblock.domain.UsageSource
 import dev.sushil.focusblock.domain.model.BlockDecision
 import dev.sushil.focusblock.domain.model.ModeState
 import dev.sushil.focusblock.domain.model.Profile
@@ -157,14 +158,13 @@ class BlockEngine(
             val rules = profiles
             // Reading usage stats is a slow system call, keep it off the main thread
             val result = withContext(Dispatchers.Default) {
-                // Read usage once per round, not once per profile
-                val cache = HashMap<String, Long?>()
-                val usedToday = { p: String -> cache.getOrPut(p) { usage.usedTodayMs(p) } }
+                // One snapshot per round, so each usage value is read at most once
+                val cached = CachingUsageSource(usage)
                 val now = LocalDateTime.now()
                 Triple(
-                    BlockEvaluator.evaluate(pkg, now, rules, usedToday),
-                    BlockEvaluator.nextRecheck(pkg, now, rules, usedToday),
-                    BlockEvaluator.timeLeft(pkg, now, rules, usedTodayMs = usedToday),
+                    BlockEvaluator.evaluate(pkg, now, rules, cached),
+                    BlockEvaluator.nextRecheck(pkg, now, rules, cached),
+                    BlockEvaluator.timeLeft(pkg, now, rules, cached),
                 )
             }
             val (decision, recheckIn, timeLeft) = result
@@ -311,4 +311,14 @@ class BlockEngine(
  */
 data class Countdown(val pkg: String, val kind: TimeLeft.Kind, val endsAt: Long) {
     fun remainingMs(): Long = (endsAt - SystemClock.elapsedRealtime()).coerceAtLeast(0)
+}
+
+/** Reads each usage value at most once, so one evaluation round makes a stable decision. */
+private class CachingUsageSource(private val delegate: UsageSource) : UsageSource {
+    private val today = HashMap<String, Long?>()
+    private val hour = HashMap<String, Long?>()
+    private val launches = HashMap<String, Int?>()
+    override fun usedTodayMs(pkg: String) = today.getOrPut(pkg) { delegate.usedTodayMs(pkg) }
+    override fun usedThisHourMs(pkg: String) = hour.getOrPut(pkg) { delegate.usedThisHourMs(pkg) }
+    override fun launchesToday(pkg: String) = launches.getOrPut(pkg) { delegate.launchesToday(pkg) }
 }

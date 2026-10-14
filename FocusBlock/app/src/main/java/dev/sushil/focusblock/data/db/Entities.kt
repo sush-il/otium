@@ -16,6 +16,10 @@ data class ProfileEntity(
     val type: RuleType, // Room stores enums as their name (TEXT)
     val dailyLimitMinutes: Int?,
     val createdAt: Long,
+    // Added in schema v2
+    val hourlyLimitMinutes: Int? = null,
+    val launchLimit: Int? = null,
+    val blockUntil: Long? = null, // epoch ms
 )
 
 @Entity(

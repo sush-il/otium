@@ -10,12 +10,17 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DatePicker
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,15 +43,105 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RuleTypeSelector(type: RuleType, onChange: (RuleType) -> Unit) {
-    val options = listOf(RuleType.ALWAYS to "Always", RuleType.SCHEDULE to "Schedule", RuleType.DAILY_LIMIT to "Daily limit")
-    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-        options.forEachIndexed { i, (value, label) ->
-            SegmentedButton(
-                selected = type == value,
-                onClick = { onChange(value) },
-                shape = SegmentedButtonDefaults.itemShape(i, options.size),
-            ) { Text(label) }
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = ruleTypeLabel(type),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Rule type") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            RuleType.entries.forEach { value ->
+                DropdownMenuItem(
+                    text = { Text(ruleTypeLabel(value)) },
+                    onClick = {
+                        onChange(value)
+                        expanded = false
+                    },
+                )
+            }
         }
+    }
+}
+
+/** Minutes slider shared by the time-limit rules. */
+@Composable
+fun MinutesLimitEditor(label: String, minutes: Int, max: Int, onChange: (Int) -> Unit) {
+    Column {
+        Text("$label: $minutes min", style = MaterialTheme.typography.bodyLarge)
+        Slider(
+            value = minutes.toFloat(),
+            onValueChange = { onChange((it / 5).roundToInt() * 5) },
+            valueRange = 5f..max.toFloat(),
+            steps = (max - 5) / 5 - 1,
+        )
+        UsageAccessWarning()
+    }
+}
+
+@Composable
+fun LaunchLimitEditor(count: Int, onChange: (Int) -> Unit) {
+    Column {
+        Text("$count opens per day, for each app", style = MaterialTheme.typography.bodyLarge)
+        Slider(
+            value = count.toFloat(),
+            onValueChange = { onChange(it.roundToInt()) },
+            valueRange = 1f..50f,
+            steps = 48,
+        )
+        UsageAccessWarning()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BlockUntilEditor(until: java.time.LocalDateTime, onChange: (java.time.LocalDateTime) -> Unit) {
+    var pickingDate by remember { mutableStateOf(false) }
+    var pickingTime by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("These apps stay blocked until:", style = MaterialTheme.typography.bodyLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = { pickingDate = true }) { Text(until.toLocalDate().toString()) }
+            OutlinedButton(onClick = { pickingTime = true }) { Text(formatMinute(until.hour * 60 + until.minute)) }
+        }
+        if (until.isBefore(java.time.LocalDateTime.now())) {
+            Text("That time is in the past.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+    if (pickingDate) {
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = until.toLocalDate().atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { pickingDate = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let {
+                        val d = java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                        onChange(until.withYear(d.year).withDayOfYear(d.dayOfYear))
+                    }
+                    pickingDate = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { pickingDate = false }) { Text("Cancel") } },
+        ) { DatePicker(state) }
+    }
+    if (pickingTime) {
+        val state = rememberTimePickerState(initialHour = until.hour, initialMinute = until.minute, is24Hour = true)
+        AlertDialog(
+            onDismissRequest = { pickingTime = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    onChange(until.withHour(state.hour).withMinute(state.minute))
+                    pickingTime = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { pickingTime = false }) { Text("Cancel") } },
+            text = { TimePicker(state) },
+        )
     }
 }
 

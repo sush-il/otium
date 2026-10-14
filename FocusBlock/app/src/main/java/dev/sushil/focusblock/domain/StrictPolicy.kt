@@ -20,7 +20,17 @@ object StrictPolicy {
             RuleType.ALWAYS -> true
             // Only allow adding windows; every existing one must still be there unchanged
             RuleType.SCHEDULE -> new.schedules.containsAll(old.schedules)
-            RuleType.DAILY_LIMIT -> (new.dailyLimitMinutes ?: Int.MAX_VALUE) <= (old.dailyLimitMinutes ?: Int.MAX_VALUE)
+            RuleType.DAILY_LIMIT -> lower(new.dailyLimitMinutes, old.dailyLimitMinutes)
+            RuleType.HOURLY_LIMIT -> lower(new.hourlyLimitMinutes, old.hourlyLimitMinutes)
+            RuleType.LAUNCH_LIMIT -> lower(new.launchLimit, old.launchLimit)
+            // Keeping the block at least as long is tightening
+            RuleType.BLOCK_UNTIL -> {
+                val o = old.blockUntil ?: return true
+                new.blockUntil?.let { !it.isBefore(o) } ?: false
+            }
         }
     }
+
+    // A smaller (or equal) limit is stricter. Missing = unlimited = loosest.
+    private fun lower(new: Int?, old: Int?) = (new ?: Int.MAX_VALUE) <= (old ?: Int.MAX_VALUE)
 }

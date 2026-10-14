@@ -1,6 +1,21 @@
 package dev.sushil.focusblock.domain.model
 
-enum class RuleType { ALWAYS, SCHEDULE, DAILY_LIMIT }
+import java.time.LocalDateTime
+
+enum class RuleType {
+    /** Blocked whenever the profile is on. */
+    ALWAYS,
+    /** Blocked during weekly time windows. */
+    SCHEDULE,
+    /** Blocked after N minutes of use today. */
+    DAILY_LIMIT,
+    /** Blocked after N minutes of use in the current clock hour. */
+    HOURLY_LIMIT,
+    /** Blocked after being opened N times today. */
+    LAUNCH_LIMIT,
+    /** Blocked until a chosen date/time ("keep away"). */
+    BLOCK_UNTIL,
+}
 
 /** A named set of apps plus one rule that decides when they are blocked. */
 data class Profile(
@@ -11,6 +26,9 @@ data class Profile(
     val packages: Set<String> = emptySet(),
     val dailyLimitMinutes: Int? = null,
     val schedules: List<Schedule> = emptyList(),
+    val hourlyLimitMinutes: Int? = null,
+    val launchLimit: Int? = null,
+    val blockUntil: LocalDateTime? = null,
 )
 
 /**

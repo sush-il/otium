@@ -34,7 +34,7 @@ abstract class ProfileDao {
         val id = if (profile.id == 0L) {
             insertProfile(profile)
         } else {
-            updateProfile(profile.id, profile.name, profile.enabled, profile.type, profile.dailyLimitMinutes)
+            updateProfile(profile.id, profile.name, profile.enabled, profile.type, profile.dailyLimitMinutes, profile.hourlyLimitMinutes, profile.launchLimit, profile.blockUntil)
             profile.id
         }
         deleteApps(id)
@@ -49,8 +49,20 @@ abstract class ProfileDao {
     @Insert protected abstract suspend fun insertSchedules(schedules: List<ScheduleEntity>)
 
     // Leaves createdAt alone so edited profiles keep their place in the list
-    @Query("UPDATE profiles SET name = :name, enabled = :enabled, type = :type, dailyLimitMinutes = :dailyLimitMinutes WHERE id = :id")
-    protected abstract suspend fun updateProfile(id: Long, name: String, enabled: Boolean, type: RuleType, dailyLimitMinutes: Int?)
+    @Query(
+        "UPDATE profiles SET name = :name, enabled = :enabled, type = :type, dailyLimitMinutes = :dailyLimitMinutes, " +
+            "hourlyLimitMinutes = :hourlyLimitMinutes, launchLimit = :launchLimit, blockUntil = :blockUntil WHERE id = :id",
+    )
+    protected abstract suspend fun updateProfile(
+        id: Long,
+        name: String,
+        enabled: Boolean,
+        type: RuleType,
+        dailyLimitMinutes: Int?,
+        hourlyLimitMinutes: Int?,
+        launchLimit: Int?,
+        blockUntil: Long?,
+    )
 
     @Query("DELETE FROM profile_apps WHERE profileId = :profileId")
     protected abstract suspend fun deleteApps(profileId: Long)

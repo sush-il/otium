@@ -3,23 +3,26 @@ package dev.sushil.focusblock.data
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import dev.sushil.focusblock.domain.UsageSource
 import dev.sushil.focusblock.util.Permissions
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 
-/** Today's foreground time per app, read from Android's own usage records. */
-class UsageRepository(private val context: Context) {
+/** Usage per app today, read from Android's own records. Returns null without usage access. */
+class UsageRepository(private val context: Context) : UsageSource {
 
     private val usageStats = context.getSystemService(UsageStatsManager::class.java)
 
-    /** Milliseconds [pkg] was in the foreground since local midnight, or null without usage access. */
-    fun usedTodayMs(pkg: String): Long? {
-        if (!Permissions.hasUsageAccess(context)) return null
-        // Recomputed every call: the date can change (midnight, time zone, manual clock change)
-        val startOfDay = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val now = System.currentTimeMillis()
+    override fun usedTodayMs(pkg: String): Long? = foregroundMsSince(pkg, startOfToday())
 
-        val events = usageStats.queryEvents(startOfDay, now)
+    override fun usedThisHourMs(pkg: String): Long? = foregroundMsSince(pkg, startOfHour())
+
+    /** Milliseconds [pkg] was in the foreground between [start] and now. */
+    private fun foregroundMsSince(pkg: String, start: Long): Long? {
+        if (!Permissions.hasUsageAccess(context)) return null
+        val now = System.currentTimeMillis()
+        val events = usageStats.queryEvents(start, now)
         val event = UsageEvents.Event()
         var total = 0L
         var resumedAt: Long? = null
@@ -30,9 +33,9 @@ class UsageRepository(private val context: Context) {
             when (event.eventType) {
                 UsageEvents.Event.ACTIVITY_RESUMED -> if (resumedAt == null) resumedAt = event.timeStamp
                 UsageEvents.Event.ACTIVITY_PAUSED -> {
-                    // A pause with no resume before it: the app was already open at midnight
-                    val start = resumedAt ?: if (!seenAny) startOfDay else null
-                    if (start != null) total += event.timeStamp - start
+                    // A pause with no resume before it: the app was already open at [start]
+                    val from = resumedAt ?: if (!seenAny) start else null
+                    if (from != null) total += event.timeStamp - from
                     resumedAt = null
                 }
             }
@@ -41,4 +44,28 @@ class UsageRepository(private val context: Context) {
         resumedAt?.let { total += now - it } // still open
         return total
     }
+
+    /** A launch = the app comes to the front after a different app was in front. */
+    override fun launchesToday(pkg: String): Int? {
+        if (!Permissions.hasUsageAccess(context)) return null
+        val events = usageStats.queryEvents(startOfToday(), System.currentTimeMillis())
+        val event = UsageEvents.Event()
+        var count = 0
+        var lastResumed: String? = null
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+                if (event.packageName == pkg && lastResumed != pkg) count++
+                lastResumed = event.packageName
+            }
+        }
+        return count
+    }
+
+    // Recomputed each call: the date/hour can change (midnight, time zone, manual clock change)
+    private fun startOfToday() =
+        LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+    private fun startOfHour() = LocalDateTime.now().withMinute(0).withSecond(0).withNano(0)
+        .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 }

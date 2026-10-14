@@ -95,6 +95,9 @@ fun ProfileEditScreen(profileId: Long, onClose: () -> Unit) {
                 RuleType.ALWAYS -> Text("These apps are blocked whenever the profile is on.")
                 RuleType.SCHEDULE -> ScheduleEditor(vm.schedule, onToggleDay = vm::toggleDay, onChange = { vm.schedule = it })
                 RuleType.DAILY_LIMIT -> DailyLimitEditor(vm.dailyLimitMinutes) { vm.dailyLimitMinutes = it }
+                RuleType.HOURLY_LIMIT -> MinutesLimitEditor("Each app, per clock hour", vm.hourlyLimitMinutes, max = 55) { vm.hourlyLimitMinutes = it }
+                RuleType.LAUNCH_LIMIT -> LaunchLimitEditor(vm.launchLimit) { vm.launchLimit = it }
+                RuleType.BLOCK_UNTIL -> BlockUntilEditor(vm.blockUntil) { vm.blockUntil = it }
             }
 
             Text("Apps (${vm.selected.size})", style = MaterialTheme.typography.titleMedium)

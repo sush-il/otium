@@ -6,6 +6,8 @@ import dev.sushil.focusblock.data.db.ProfileWithDetails
 import dev.sushil.focusblock.data.db.ScheduleEntity
 import dev.sushil.focusblock.domain.model.Profile
 import dev.sushil.focusblock.domain.model.Schedule
+import java.time.Instant
+import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -24,6 +26,9 @@ class ProfileRepository(private val dao: ProfileDao) {
             type = profile.type,
             dailyLimitMinutes = profile.dailyLimitMinutes,
             createdAt = System.currentTimeMillis(),
+            hourlyLimitMinutes = profile.hourlyLimitMinutes,
+            launchLimit = profile.launchLimit,
+            blockUntil = profile.blockUntil?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
         ),
         packages = profile.packages,
         schedules = profile.schedules.map {
@@ -43,5 +48,10 @@ class ProfileRepository(private val dao: ProfileDao) {
         packages = apps.mapTo(mutableSetOf()) { it.packageName },
         dailyLimitMinutes = profile.dailyLimitMinutes,
         schedules = schedules.map { Schedule(it.daysMask, it.startMinute, it.endMinute) },
+        hourlyLimitMinutes = profile.hourlyLimitMinutes,
+        launchLimit = profile.launchLimit,
+        blockUntil = profile.blockUntil?.let {
+            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDateTime()
+        },
     )
 }

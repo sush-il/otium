@@ -14,6 +14,19 @@ fun Profile.summary(): String = when (type) {
     RuleType.ALWAYS -> "Always blocked"
     RuleType.SCHEDULE -> schedules.joinToString { it.summary() }.ifEmpty { "No schedule" }
     RuleType.DAILY_LIMIT -> "${dailyLimitMinutes ?: 0} min per day"
+    RuleType.HOURLY_LIMIT -> "${hourlyLimitMinutes ?: 0} min per hour"
+    RuleType.LAUNCH_LIMIT -> "${launchLimit ?: 0} opens per day"
+    RuleType.BLOCK_UNTIL -> blockUntil?.let { "Blocked until ${it.toLocalDate()}" } ?: "Blocked until a date"
+}
+
+/** Short label for the rule-type picker. */
+fun ruleTypeLabel(type: RuleType): String = when (type) {
+    RuleType.ALWAYS -> "Always"
+    RuleType.SCHEDULE -> "Schedule"
+    RuleType.DAILY_LIMIT -> "Daily time limit"
+    RuleType.HOURLY_LIMIT -> "Hourly time limit"
+    RuleType.LAUNCH_LIMIT -> "Launch-count limit"
+    RuleType.BLOCK_UNTIL -> "Block until a date"
 }
 
 fun Schedule.summary(): String = "${daysLabel(daysMask)} ${formatMinute(startMinute)}–${formatMinute(endMinute)}"
