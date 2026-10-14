@@ -1,6 +1,7 @@
 package dev.sushil.focusblock.ui.profiles
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
@@ -24,7 +25,7 @@ class ProfileEditViewModel(
 
     var name by mutableStateOf("")
     var type by mutableStateOf(RuleType.ALWAYS)
-    var dailyLimitMinutes by mutableStateOf(30)
+    var dailyLimitMinutes by mutableIntStateOf(30)
     // The UI edits one time window; the data model allows several
     var schedule by mutableStateOf(Schedule(daysMask = 0b0011111, startMinute = 9 * 60, endMinute = 17 * 60))
 

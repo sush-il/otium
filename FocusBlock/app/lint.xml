@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Targeting 37 would opt into Android 17 behaviour changes nobody has tested yet -->
+    <issue id="OldTargetApi" severity="ignore" />
+    <!-- allowBackup="false" already disables backups below Android 12 -->
+    <issue id="DataExtractionRules" severity="ignore" />
+    <!-- aapt2 can't find the adaptive icon without the -v26 folder qualifier -->
+    <issue id="ObsoleteSdkInt">
+        <ignore path="src/main/res/mipmap-anydpi-v26" />
+    </issue>
+</lint>

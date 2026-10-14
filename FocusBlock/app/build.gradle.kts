@@ -16,8 +16,24 @@ android {
         versionName = "0.1.0"
     }
 
+    // Release signing: values come from ~/.gradle/gradle.properties so secrets never enter the repo.
+    // FOCUSBLOCK_STORE_FILE, FOCUSBLOCK_STORE_PASSWORD, FOCUSBLOCK_KEY_ALIAS, FOCUSBLOCK_KEY_PASSWORD
+    val storeFilePath = providers.gradleProperty("FOCUSBLOCK_STORE_FILE").orNull
+    signingConfigs {
+        if (storeFilePath != null) {
+            create("release") {
+                storeFile = file(storeFilePath)
+                storePassword = providers.gradleProperty("FOCUSBLOCK_STORE_PASSWORD").get()
+                keyAlias = providers.gradleProperty("FOCUSBLOCK_KEY_ALIAS").get()
+                keyPassword = providers.gradleProperty("FOCUSBLOCK_KEY_PASSWORD").get()
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Without a keystore configured the release APK is built unsigned
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

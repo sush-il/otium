@@ -4,10 +4,10 @@ import android.app.AppOpsManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Process
 import android.provider.Settings
+import androidx.core.net.toUri
 import dev.sushil.focusblock.service.BlockerAccessibilityService
 
 object Permissions {
@@ -40,7 +40,7 @@ object Permissions {
     fun usageAccessIntent() = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
 
     fun appDetailsIntent(context: Context) =
-        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${context.packageName}".toUri())
 
     fun accessibilitySettingsIntent() = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
 }
