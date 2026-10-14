@@ -50,13 +50,13 @@ class LimitPause(private val settings: SettingsStore, private val guard: EditGua
             val current = settings.pausedLimits.first()
             if (key in current) {
                 settings.setPausedLimits(current - key)
-                notice = "Limits resumed"
+                notice = "Limits back on"
                 return@launch
             }
             when (val check = guard.checkLoosen()) {
                 EditCheck.Allowed -> {
                     settings.setPausedLimits(current + key)
-                    notice = "Limits paused. Tap again to resume"
+                    notice = "Limits paused"
                 }
                 EditCheck.NeedsPassword -> passwordNeededFor = { toggle(key) }
                 is EditCheck.Forbidden -> error = check.reason
