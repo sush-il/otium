@@ -1,6 +1,7 @@
 package dev.sushil.focusblock
 
 import android.content.Context
+import dev.sushil.focusblock.data.BrowserRegistry
 import dev.sushil.focusblock.data.InstalledAppsRepository
 import dev.sushil.focusblock.data.ModeStore
 import dev.sushil.focusblock.data.ProfileRepository
@@ -25,7 +26,8 @@ class AppContainer(context: Context) {
     val settingsStore = SettingsStore(context)
     val modeStore = ModeStore(context)
     val unlockGrants = UnlockGrants()
-    val blockEngine = BlockEngine(context, profileRepository, usageRepository, modeStore, settingsStore, unlockGrants)
+    private val browserRegistry = BrowserRegistry(context)
+    val blockEngine = BlockEngine(context, profileRepository, usageRepository, modeStore, settingsStore, browserRegistry, unlockGrants)
     val editGuard = EditGuard(modeStore, unlockGrants)
 
     // Process-wide background work that isn't tied to a screen

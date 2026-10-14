@@ -13,7 +13,9 @@ import dev.sushil.focusblock.data.ModeStore
 import dev.sushil.focusblock.data.SettingsStore
 import dev.sushil.focusblock.data.ProfileRepository
 import dev.sushil.focusblock.data.UsageRepository
+import dev.sushil.focusblock.data.BrowserRegistry
 import dev.sushil.focusblock.domain.BlockEvaluator
+import dev.sushil.focusblock.domain.SiteMatcher
 import dev.sushil.focusblock.domain.UsageSource
 import dev.sushil.focusblock.domain.model.BlockDecision
 import dev.sushil.focusblock.domain.model.ModeState
@@ -51,6 +53,7 @@ class BlockEngine(
     private val usage: UsageRepository,
     modeStore: ModeStore,
     settingsStore: SettingsStore,
+    private val browsers: BrowserRegistry,
     private val grants: UnlockGrants,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -59,6 +62,8 @@ class BlockEngine(
     @Volatile private var profiles: List<Profile> = emptyList()
     @Volatile private var modeState = ModeState()
     @Volatile private var excludedApps: Set<String> = emptySet()
+    @Volatile private var blockedSites: Set<String> = emptySet()
+    @Volatile private var blockedKeywords: Set<String> = emptySet()
 
     private var current: String? = null
     private var checkJob: Job? = null
@@ -97,6 +102,19 @@ class BlockEngine(
                 current?.let { pkg -> startWatching(pkg) }
             }
         }
+        scope.launch { settingsStore.blockedSites.collect { blockedSites = it } }
+        scope.launch { settingsStore.blockedKeywords.collect { blockedKeywords = it } }
+    }
+
+    val browserPackages: Set<String> get() = browsers.browserPackages
+
+    fun urlBarViewId(pkg: String): String? = browsers.urlBarViewId(pkg)
+
+    /** Browser address-bar text changed: send the user home if it's a blocked site/search. */
+    fun onBrowserText(pkg: String, text: String) {
+        val reason = SiteMatcher.blockedReason(text, blockedSites, blockedKeywords) ?: return
+        log("blocked browsing in $pkg: $reason")
+        block(pkg, reason)
     }
 
     fun attachAccessibility(service: AccessibilityService) {

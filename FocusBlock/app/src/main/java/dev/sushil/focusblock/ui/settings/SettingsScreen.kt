@@ -32,7 +32,12 @@ import dev.sushil.focusblock.ui.common.appContainer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onOpenSetup: () -> Unit, onOpenExcludedApps: () -> Unit) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onOpenSetup: () -> Unit,
+    onOpenExcludedApps: () -> Unit,
+    onOpenWebContent: () -> Unit,
+) {
     val container = appContainer()
     val vm: SettingsViewModel = viewModel(
         factory = viewModelFactory { initializer { SettingsViewModel(container.settingsStore) } },
@@ -90,6 +95,14 @@ fun SettingsScreen(onBack: () -> Unit, onOpenSetup: () -> Unit, onOpenExcludedAp
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedButton(onClick = onOpenExcludedApps) { Text("Excluded apps") }
+
+            Text("Websites & keywords", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+            Text(
+                "Block sites and search keywords in browsers.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(onClick = onOpenWebContent) { Text("Websites & keywords") }
 
             OutlinedButton(onClick = onOpenSetup, modifier = Modifier.padding(top = 8.dp)) {
                 Text("Permissions & setup")
