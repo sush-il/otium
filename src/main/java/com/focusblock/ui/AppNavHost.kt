@@ -1,5 +1,10 @@
 package com.focusblock.ui
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -43,7 +48,19 @@ fun AppNavHost() {
     val start = remember {
         if (Permissions.hasRequired(context)) Routes.PROFILES else Routes.PERMISSIONS
     }
-    NavHost(navController = nav, startDestination = start) {
+    NavHost(
+        navController = nav,
+        startDestination = start,
+        // Quick, fluid slide + fade; avoids the default crossfade flash between screens
+        enterTransition = {
+            slideInHorizontally(tween(220)) { it / 5 } + fadeIn(tween(180))
+        },
+        exitTransition = { fadeOut(tween(140)) },
+        popEnterTransition = { fadeIn(tween(180)) },
+        popExitTransition = {
+            slideOutHorizontally(tween(200)) { it / 5 } + fadeOut(tween(140))
+        },
+    ) {
         composable(Routes.PROFILES) {
             ProfileListScreen(
                 onOpenProfile = { nav.navigate(Routes.profileEdit(it)) },
