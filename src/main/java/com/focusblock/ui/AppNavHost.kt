@@ -35,6 +35,7 @@ import com.focusblock.ui.apps.ManageBlockedAppsScreen
 import com.focusblock.ui.profiles.ProfileListScreen
 import com.focusblock.ui.settings.ExcludedAppsScreen
 import com.focusblock.ui.settings.FeedsScreen
+import com.focusblock.ui.settings.KeywordsScreen
 import com.focusblock.ui.settings.SettingsScreen
 import com.focusblock.ui.settings.WebContentScreen
 import com.focusblock.util.Permissions
@@ -49,6 +50,7 @@ object Routes {
     const val EXCLUDED_APPS = "excluded_apps"
     const val WEB_CONTENT = "web_content"
     const val FEEDS = "feeds"
+    const val KEYWORDS = "keywords"
     const val MANAGE_APPS = "manage_apps"
     const val APP_LIMIT = "app_limit/{pkg}"
     const val SITE_LIMIT = "site_limit/{host}"
@@ -119,6 +121,7 @@ fun AppNavHost() {
                 onOpenApps = { nav.navigate(Routes.MANAGE_APPS) },
                 onOpenSites = { nav.navigate(Routes.WEB_CONTENT) },
                 onOpenFeeds = { nav.navigate(Routes.FEEDS) },
+                onOpenKeywords = { nav.navigate(Routes.KEYWORDS) },
             )
         }
         composable(Routes.MANAGE_APPS) {
@@ -147,6 +150,7 @@ fun AppNavHost() {
                 onOpenSetup = { nav.navigate(Routes.PERMISSIONS) },
                 onOpenExcludedApps = { nav.navigate(Routes.EXCLUDED_APPS) },
                 onOpenWebContent = { nav.navigate(Routes.WEB_CONTENT) },
+                onOpenKeywords = { nav.navigate(Routes.KEYWORDS) },
                 onOpenFeeds = { nav.navigate(Routes.FEEDS) },
             )
         }
@@ -167,6 +171,9 @@ fun AppNavHost() {
                 host = entry.arguments?.getString("host").orEmpty(),
                 onBack = { nav.popBackStack() },
             )
+        }
+        composable(Routes.KEYWORDS) {
+            KeywordsScreen(onBack = { nav.popBackStack() })
         }
         composable(Routes.FEEDS) {
             FeedsScreen(onBack = { nav.popBackStack() })

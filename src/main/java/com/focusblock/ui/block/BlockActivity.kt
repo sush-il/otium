@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.safeDrawing
@@ -101,7 +102,7 @@ class BlockActivity : ComponentActivity() {
         val line = remember(blocked) { LINES.random() }
         // Fallback auto-dismiss so it never gets stuck if they walk away
         LaunchedEffect(blocked) {
-            delay(10_000)
+            delay(5_000)
             onGoHome()
         }
         val scheme = MaterialTheme.colorScheme
@@ -110,11 +111,12 @@ class BlockActivity : ComponentActivity() {
                 Brush.verticalGradient(listOf(scheme.primaryContainer, scheme.background, scheme.background)),
             ),
         ) {
-            // X to dismiss, top-right
-            IconButton(
+            // X to dismiss: larger, on a filled circle, a little below the status bar
+            FilledTonalIconButton(
                 onClick = onGoHome,
-                modifier = Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(8.dp),
-            ) { Icon(Icons.Default.Close, contentDescription = "Dismiss") }
+                modifier = Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(top = 24.dp, end = 20.dp).size(52.dp),
+            ) { Icon(Icons.Default.Close, contentDescription = "Dismiss", modifier = Modifier.size(28.dp)) }
 
             Column(
                 modifier = Modifier.fillMaxSize().padding(40.dp),
@@ -128,7 +130,14 @@ class BlockActivity : ComponentActivity() {
                     blocked.icon?.let { Image(it, contentDescription = null, modifier = Modifier.size(48.dp)) }
                         ?: Text("🚫", style = MaterialTheme.typography.displaySmall)
                 }
-                Text(line, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text(
+                    line,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = scheme.onBackground,
+                    textAlign = TextAlign.Center,
+                    lineHeight = MaterialTheme.typography.headlineSmall.lineHeight * 1.15f,
+                )
                 Text(
                     "${blocked.label} · ${blocked.reason}",
                     style = MaterialTheme.typography.bodyMedium,

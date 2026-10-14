@@ -11,6 +11,7 @@ import com.focusblock.domain.model.RuleType
 import com.focusblock.domain.model.Schedule
 import com.focusblock.domain.model.SiteLimit
 import com.focusblock.ui.common.EditCheck
+import com.focusblock.ui.common.LimitForm
 import com.focusblock.ui.common.EditGuard
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,25 +24,25 @@ class SiteLimitEditorViewModel(
     private val host: String,
     private val repo: SiteLimitRepository,
     private val guard: EditGuard,
-) : ViewModel() {
+) : ViewModel(), LimitForm {
 
     val rules: StateFlow<List<SiteLimit>> =
         repo.limits.map { all -> all.filter { it.host == host } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    var type by mutableStateOf(RuleType.DAILY_LIMIT)
-    var dailyLimitMinutes by mutableIntStateOf(30)
-    var hourlyLimitMinutes by mutableIntStateOf(10)
-    var launchLimit by mutableIntStateOf(10)
-    var blockUntil by mutableStateOf(LocalDateTime.now().plusHours(1).withSecond(0).withNano(0))
-    var schedule by mutableStateOf(Schedule(daysMask = 0b0011111, startMinute = 9 * 60, endMinute = 17 * 60))
+    override var type: RuleType by mutableStateOf(RuleType.DAILY_LIMIT)
+    override var dailyLimitMinutes: Int by mutableIntStateOf(30)
+    override var hourlyLimitMinutes: Int by mutableIntStateOf(10)
+    override var launchLimit: Int by mutableIntStateOf(10)
+    override var blockUntil: LocalDateTime by mutableStateOf(LocalDateTime.now().plusHours(1).withSecond(0).withNano(0))
+    override var schedule: Schedule by mutableStateOf(Schedule(daysMask = 0b0011111, startMinute = 9 * 60, endMinute = 17 * 60))
 
     var error by mutableStateOf<String?>(null)
         private set
     var passwordNeededFor by mutableStateOf<(() -> Unit)?>(null)
         private set
 
-    fun addCurrent() {
+    override fun addCurrent() {
         viewModelScope.launch {
             repo.add(
                 SiteLimit(

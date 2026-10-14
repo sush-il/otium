@@ -48,12 +48,11 @@ fun WebContentScreen(onBack: () -> Unit, onOpenSite: (String) -> Unit) {
         factory = viewModelFactory { initializer { WebContentViewModel(container.settingsStore, container.siteLimitRepository) } },
     )
     val sites by vm.sites.collectAsStateWithLifecycle()
-    val keywords by vm.keywords.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Websites & keywords") },
+                title = { Text("Websites") },
                 navigationIcon = { BackButton(onClick = onBack) },
             )
         },
@@ -91,24 +90,6 @@ fun WebContentScreen(onBack: () -> Unit, onOpenSite: (String) -> Unit) {
                 }
             }
 
-            item { SectionLabel("Keywords") }
-            item { AddField("Add a keyword", onAdd = vm::addKeyword) }
-            item {
-                val list = keywords.orEmpty().toList()
-                if (list.isEmpty()) {
-                    EmptyHint("Blocks pages or searches containing these words.")
-                } else {
-                    GroupCard {
-                        list.forEachIndexed { i, kw ->
-                            if (i > 0) RowDivider()
-                            Row(Modifier.fillMaxWidth().padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(kw, Modifier.weight(1f))
-                                TextButton(onClick = { vm.removeKeyword(kw) }) { Text("Remove") }
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 }

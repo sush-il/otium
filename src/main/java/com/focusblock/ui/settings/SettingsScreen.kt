@@ -49,6 +49,7 @@ fun SettingsScreen(
     onOpenSetup: () -> Unit,
     onOpenExcludedApps: () -> Unit,
     onOpenWebContent: () -> Unit,
+    onOpenKeywords: () -> Unit,
     onOpenFeeds: () -> Unit,
 ) {
     val container = appContainer()
@@ -92,7 +93,9 @@ fun SettingsScreen(
                 SettingsGroup {
                     NavRow("🚫", "Excluded apps", "Never blocked by whole-phone", onOpenExcludedApps)
                     Divider()
-                    NavRow("🌐", "Websites & keywords", null, onOpenWebContent)
+                    NavRow("🌐", "Websites", "Per-site limits", onOpenWebContent)
+                    Divider()
+                    NavRow("🔤", "Keywords", "Block words in pages & searches", onOpenKeywords)
                     Divider()
                     NavRow("🎬", "Feeds & content", "Shorts, Reels, adult", onOpenFeeds)
                     Divider()
