@@ -1,5 +1,6 @@
 package com.focusblock.ui.settings
 
+import com.focusblock.ui.common.BackButton
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -66,7 +67,7 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Settings") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
+                navigationIcon = { BackButton(onClick = onBack) },
             )
         },
     ) { padding ->

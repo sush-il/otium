@@ -1,5 +1,6 @@
 package com.focusblock.ui.settings
 
+import com.focusblock.ui.common.BackButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,7 +44,7 @@ fun FeedsScreen(onBack: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text("Feeds & content") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
+                navigationIcon = { BackButton(onClick = onBack) },
             )
         },
     ) { padding ->

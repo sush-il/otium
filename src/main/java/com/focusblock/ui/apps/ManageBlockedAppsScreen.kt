@@ -1,5 +1,6 @@
 package com.focusblock.ui.apps
 
+import com.focusblock.ui.common.BackButton
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -75,7 +76,7 @@ fun ManageBlockedAppsScreen(onBack: () -> Unit, onOpenApp: (String) -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text("Blocked apps") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
+                navigationIcon = { BackButton(onClick = onBack) },
             )
         },
     ) { padding ->

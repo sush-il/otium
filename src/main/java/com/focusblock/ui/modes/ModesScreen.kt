@@ -1,5 +1,6 @@
 package com.focusblock.ui.modes
 
+import com.focusblock.ui.common.BackButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -78,7 +79,7 @@ fun ModesScreen(onBack: () -> Unit, onOpenEmergency: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text("Modes") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
+                navigationIcon = { BackButton(onClick = onBack) },
             )
         },
     ) { padding ->

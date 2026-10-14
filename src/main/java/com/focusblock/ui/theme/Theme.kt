@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 
 // Latte
 private val CatppuccinLight = lightColorScheme(
-    primary = Color(0xFF8839EF), // mauve
+    primary = Color(0xFF7C53C9), // softened mauve
     onPrimary = Color(0xFFFFFFFF),
     primaryContainer = Color(0xFFEAD9FF),
     onPrimaryContainer = Color(0xFF2B0A52),
@@ -49,7 +49,7 @@ private val CatppuccinLight = lightColorScheme(
 
 // Mocha
 private val CatppuccinDark = darkColorScheme(
-    primary = Color(0xFFCBA6F7), // mauve
+    primary = Color(0xFFBCA7E6), // softened mauve
     onPrimary = Color(0xFF2A1A4A),
     primaryContainer = Color(0xFF45386B),
     onPrimaryContainer = Color(0xFFEAD9FF),

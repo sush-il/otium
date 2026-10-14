@@ -1,5 +1,6 @@
 package com.focusblock.ui.settings
 
+import com.focusblock.ui.common.BackButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,7 +46,7 @@ fun WebContentScreen(onBack: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text("Websites & keywords") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
+                navigationIcon = { BackButton(onClick = onBack) },
             )
         },
     ) { padding ->

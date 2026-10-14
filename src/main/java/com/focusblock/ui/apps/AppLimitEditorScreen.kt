@@ -1,5 +1,6 @@
 package com.focusblock.ui.apps
 
+import com.focusblock.ui.common.BackButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -90,7 +91,7 @@ fun AppLimitEditorScreen(packageName: String, onBack: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text(label) },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
+                navigationIcon = { BackButton(onClick = onBack) },
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },

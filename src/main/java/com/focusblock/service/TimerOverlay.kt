@@ -60,16 +60,15 @@ class TimerOverlay(private val context: Context) {
     private fun render() {
         val v = view ?: createView().also { view = it }
         if (!expanded) {
-            // Collapsed: just a small arrow, no number
+            // Collapsed: a bigger arrow that's easy to see and tap
             v.text = "›"
-            v.setPadding(dp(5), dp(10), dp(7), dp(10))
+            v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+            v.setPadding(dp(12), dp(16), dp(14), dp(16))
         } else {
-            val time = formatCountdown(lastRemaining)
-            v.text = when (lastKind) {
-                TimeLeft.Kind.LIMIT -> "$lastLabel · $time ‹"
-                else -> "$lastLabel · blocked in $time ‹"
-            }
-            v.setPadding(dp(12), dp(8), dp(12), dp(8))
+            // Expanded: just the time (you're already in the app, so no name needed)
+            v.text = "${formatCountdown(lastRemaining)} ‹"
+            v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            v.setPadding(dp(14), dp(12), dp(14), dp(12))
         }
     }
 

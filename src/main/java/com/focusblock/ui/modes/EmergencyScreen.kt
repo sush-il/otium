@@ -1,5 +1,6 @@
 package com.focusblock.ui.modes
 
+import com.focusblock.ui.common.BackButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -112,7 +113,7 @@ fun EmergencyScreen(onClose: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text("Emergency unlock") },
-                navigationIcon = { TextButton(onClick = onClose) { Text("Back") } },
+                navigationIcon = { BackButton(onClick = onClose) },
             )
         },
     ) { padding ->
