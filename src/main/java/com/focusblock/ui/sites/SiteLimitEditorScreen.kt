@@ -1,6 +1,7 @@
 package com.focusblock.ui.sites
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -109,7 +110,7 @@ fun SiteLimitEditorScreen(host: String, onBack: () -> Unit) {
             } else {
                 Text("Active limits", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 rules.forEachIndexed { index, rule ->
-                    Card(Modifier.fillMaxWidth()) {
+                    Card(Modifier.fillMaxWidth().clickable { vm.loadForEdit(rule); showSheet = true }) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Box(
                                 Modifier.size(32.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
@@ -133,7 +134,8 @@ fun SiteLimitEditorScreen(host: String, onBack: () -> Unit) {
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Text("Add a limit", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                val editing = rules.any { it.type == vm.type }
+                Text(if (editing) "Edit limit" else "Add a limit", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 RuleTypeSelector(vm.type) { vm.type = it }
                 when (vm.type) {
                     RuleType.ALWAYS -> Text("Blocks this site whenever it's open.")
@@ -153,7 +155,7 @@ fun SiteLimitEditorScreen(host: String, onBack: () -> Unit) {
                         showSheet = false
                     },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Add") }
+                ) { Text(if (editing) "Save" else "Add") }
             }
         }
     }

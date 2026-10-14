@@ -57,6 +57,16 @@ class SiteLimitEditorViewModel(
         }
     }
 
+    /** Pre-fill the form from an existing rule so it can be edited (adding replaces same type). */
+    fun loadForEdit(rule: SiteLimit) {
+        type = rule.type
+        rule.dailyLimitMinutes?.let { dailyLimitMinutes = it }
+        rule.hourlyLimitMinutes?.let { hourlyLimitMinutes = it }
+        rule.launchLimit?.let { launchLimit = it }
+        rule.blockUntil?.let { blockUntil = it }
+        rule.schedule?.let { schedule = it }
+    }
+
     fun blockAlways() {
         viewModelScope.launch { repo.add(SiteLimit(host = host, type = RuleType.ALWAYS)) }
     }
