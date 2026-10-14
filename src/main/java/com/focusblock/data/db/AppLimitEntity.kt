@@ -37,6 +37,9 @@ interface AppLimitDao {
     @Query("DELETE FROM app_limits WHERE packageName = :pkg")
     suspend fun deleteByPackage(pkg: String)
 
+    @Query("DELETE FROM app_limits WHERE packageName = :pkg AND type = :type")
+    suspend fun deleteByPackageAndType(pkg: String, type: RuleType)
+
     @Query("SELECT COUNT(*) FROM app_limits WHERE packageName = :pkg AND type = 'ALWAYS'")
     suspend fun alwaysCount(pkg: String): Int
 }

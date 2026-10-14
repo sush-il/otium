@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -207,51 +208,68 @@ private fun QuickActions(
     val adult by vm.adultOn.collectAsStateWithLifecycle()
     val reels by vm.reelsOn.collectAsStateWithLifecycle()
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        CountRow("📱", "${apps ?: 0}", "Apps Blocked", onOpenApps)
-        CountRow("🌐", "${sites ?: 0}", "Sites Blocked", onOpenSites)
-        ToggleRow("🔤", "Keywords Blocked", keywords, onConfigure = onOpenSites) { vm.setQuick(ProfileListViewModel.Quick.KEYWORDS, it) }
-        ToggleRow("🔞", "Block Adult Content", adult, onConfigure = null) { vm.setQuick(ProfileListViewModel.Quick.ADULT, it) }
-        ToggleRow("🎬", "Block Reels / Shorts", reels, onConfigure = onOpenFeeds) { vm.setQuick(ProfileListViewModel.Quick.REELS, it) }
-    }
-}
-
-@Composable
-private fun Badge(glyph: String) {
-    Box(
-        Modifier.size(44.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) { Text(glyph, fontSize = 20.sp) }
-}
-
-@Composable
-private fun CountRow(glyph: String, count: String, label: String, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Badge(glyph)
-            Column(Modifier.weight(1f)) {
-                Text(count, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Text("›", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            NavTile("📱", "${apps ?: 0}", "Apps blocked", Modifier.weight(1f), onOpenApps)
+            NavTile("🌐", "${sites ?: 0}", "Sites blocked", Modifier.weight(1f), onOpenSites)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ToggleTile("🎬", "Reels & Shorts", reels, Modifier.weight(1f)) { vm.setQuick(ProfileListViewModel.Quick.REELS, it) }
+            ToggleTile("🔞", "Adult sites", adult, Modifier.weight(1f)) { vm.setQuick(ProfileListViewModel.Quick.ADULT, it) }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ToggleTile("🔤", "Keywords", keywords, Modifier.weight(1f)) { vm.setQuick(ProfileListViewModel.Quick.KEYWORDS, it) }
+            Box(Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-private fun ToggleRow(glyph: String, label: String, on: Boolean?, onConfigure: (() -> Unit)?, onChange: (Boolean) -> Unit) {
+private fun TileBadge(glyph: String, tint: androidx.compose.ui.graphics.Color) {
+    Box(
+        Modifier.size(40.dp).background(tint, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) { Text(glyph, fontSize = 18.sp) }
+}
+
+/** A big rounded tile that shows a count and navigates on tap. */
+@Composable
+private fun NavTile(glyph: String, value: String, label: String, modifier: Modifier, onClick: () -> Unit) {
+    Card(
+        modifier = modifier.height(132.dp).clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(Modifier.fillMaxSize().padding(16.dp)) {
+            TileBadge(glyph, MaterialTheme.colorScheme.secondaryContainer)
+            Box(Modifier.weight(1f))
+            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** A big rounded tile that toggles on tap; colours up when on. */
+@Composable
+private fun ToggleTile(glyph: String, label: String, on: Boolean?, modifier: Modifier, onChange: (Boolean) -> Unit) {
     val checked = on == true
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Badge(glyph)
-            Column(Modifier.weight(1f)) {
-                Text(if (checked) "On" else "Off", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (onConfigure != null) {
-                    TextButton(onClick = onConfigure, contentPadding = PaddingValues(0.dp)) { Text("Configure →") }
-                }
+    Card(
+        modifier = modifier.height(132.dp).clickable { onChange(!checked) },
+        colors = CardDefaults.cardColors(
+            containerColor = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(Modifier.fillMaxSize().padding(16.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                TileBadge(
+                    glyph,
+                    if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                )
+                Box(Modifier.weight(1f))
+                Switch(checked = checked, onCheckedChange = onChange)
             }
-            Switch(checked = checked, onCheckedChange = onChange)
+            Box(Modifier.weight(1f))
+            Text(if (checked) "On" else "Off", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

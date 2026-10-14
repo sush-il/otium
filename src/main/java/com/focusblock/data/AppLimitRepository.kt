@@ -15,7 +15,11 @@ class AppLimitRepository(private val dao: AppLimitDao) {
 
     val limits: Flow<List<AppLimit>> = dao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
-    suspend fun add(limit: AppLimit): Long = dao.insert(limit.toEntity())
+    /** Each rule type is unique per app, so adding one replaces an existing rule of that type. */
+    suspend fun add(limit: AppLimit): Long {
+        dao.deleteByPackageAndType(limit.packageName, limit.type)
+        return dao.insert(limit.toEntity())
+    }
 
     suspend fun removeRule(id: Long) = dao.delete(id)
 
