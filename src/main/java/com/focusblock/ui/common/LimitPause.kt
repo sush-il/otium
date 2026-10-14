@@ -3,7 +3,8 @@ package com.focusblock.ui.common
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.materialIcon
+import androidx.compose.material.icons.materialPath
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -15,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.focusblock.data.SettingsStore
 import com.focusblock.ui.lock.PasswordDialog
@@ -76,14 +78,44 @@ fun PauseDialogs(pause: LimitPause) {
     }
 }
 
-/** Filled coloured lock = limits active; plain outline = paused. */
+/** Filled open lock = paused; outlined closed lock = limits active. */
 @Composable
 fun PauseButton(paused: Boolean, onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
         Icon(
-            imageVector = if (paused) Icons.Outlined.Lock else Icons.Filled.Lock,
+            imageVector = if (paused) LockOpenFilled else Icons.Outlined.Lock,
             contentDescription = if (paused) "Resume limits" else "Pause limits",
-            tint = if (paused) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+            tint = if (paused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+// Material "lock open" (filled); not in the core icon set, so drawn here.
+private val LockOpenFilled: ImageVector = materialIcon(name = "Filled.LockOpen") {
+    materialPath {
+        moveTo(12f, 17f)
+        curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
+        reflectiveCurveToRelative(-0.9f, -2f, -2f, -2f)
+        reflectiveCurveToRelative(-2f, 0.9f, -2f, 2f)
+        reflectiveCurveToRelative(0.9f, 2f, 2f, 2f)
+        close()
+        moveToRelative(6f, -9f)
+        horizontalLineToRelative(-1f)
+        verticalLineTo(6f)
+        curveToRelative(0f, -2.76f, -2.24f, -5f, -5f, -5f)
+        reflectiveCurveTo(7f, 3.24f, 7f, 6f)
+        horizontalLineToRelative(1.9f)
+        curveToRelative(0f, -1.71f, 1.39f, -3.1f, 3.1f, -3.1f)
+        curveToRelative(1.71f, 0f, 3.1f, 1.39f, 3.1f, 3.1f)
+        verticalLineToRelative(2f)
+        horizontalLineTo(6f)
+        curveToRelative(-1.1f, 0f, -2f, 0.9f, -2f, 2f)
+        verticalLineToRelative(10f)
+        curveToRelative(0f, 1.1f, 0.9f, 2f, 2f, 2f)
+        horizontalLineToRelative(12f)
+        curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
+        verticalLineTo(10f)
+        curveToRelative(0f, -1.1f, -0.9f, -2f, -2f, -2f)
+        close()
     }
 }
