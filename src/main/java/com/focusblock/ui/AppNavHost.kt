@@ -5,6 +5,15 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -52,25 +61,50 @@ fun AppNavHost() {
     val start = remember {
         if (Permissions.hasRequired(context)) Routes.PROFILES else Routes.PERMISSIONS
     }
-    NavHost(
-        navController = nav,
-        startDestination = start,
-        // Quick, fluid slide + fade; avoids the default crossfade flash between screens
-        enterTransition = {
-            slideInHorizontally(tween(220)) { it / 5 } + fadeIn(tween(180))
+    val backStack by nav.currentBackStackEntryAsState()
+    val route = backStack?.destination?.route
+    // The bottom bar only shows on the two top-level tabs
+    val showBottomBar = route == Routes.PROFILES || route == Routes.SETTINGS
+
+    Scaffold(
+        bottomBar = {
+            if (showBottomBar) {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = route == Routes.PROFILES,
+                        onClick = { nav.switchTab(Routes.PROFILES) },
+                        icon = { Text("🏠", fontSize = 18.sp) },
+                        label = { Text("Home") },
+                    )
+                    NavigationBarItem(
+                        selected = route == Routes.SETTINGS,
+                        onClick = { nav.switchTab(Routes.SETTINGS) },
+                        icon = { Text("⚙️", fontSize = 18.sp) },
+                        label = { Text("Settings") },
+                    )
+                }
+            }
         },
-        exitTransition = { fadeOut(tween(140)) },
-        popEnterTransition = { fadeIn(tween(180)) },
-        popExitTransition = {
-            slideOutHorizontally(tween(200)) { it / 5 } + fadeOut(tween(140))
-        },
-    ) {
+    ) { bottomPadding ->
+        NavHost(
+            navController = nav,
+            startDestination = start,
+            modifier = Modifier.padding(bottomPadding),
+            // Quick, fluid slide + fade; avoids the default crossfade flash between screens
+            enterTransition = {
+                slideInHorizontally(tween(220)) { it / 5 } + fadeIn(tween(180))
+            },
+            exitTransition = { fadeOut(tween(140)) },
+            popEnterTransition = { fadeIn(tween(180)) },
+            popExitTransition = {
+                slideOutHorizontally(tween(200)) { it / 5 } + fadeOut(tween(140))
+            },
+        ) {
         composable(Routes.PROFILES) {
             ProfileListScreen(
                 onOpenProfile = { nav.navigate(Routes.profileEdit(it)) },
                 onNewProfile = { nav.navigate(Routes.profileEdit(0)) },
                 onOpenSetup = { nav.navigate(Routes.PERMISSIONS) },
-                onOpenSettings = { nav.navigate(Routes.SETTINGS) },
                 onOpenModes = { nav.navigate(Routes.MODES) },
                 onOpenApps = { nav.navigate(Routes.MANAGE_APPS) },
                 onOpenSites = { nav.navigate(Routes.WEB_CONTENT) },
@@ -100,7 +134,6 @@ fun AppNavHost() {
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(
-                onBack = { nav.popBackStack() },
                 onOpenSetup = { nav.navigate(Routes.PERMISSIONS) },
                 onOpenExcludedApps = { nav.navigate(Routes.EXCLUDED_APPS) },
                 onOpenWebContent = { nav.navigate(Routes.WEB_CONTENT) },
@@ -133,5 +166,15 @@ fun AppNavHost() {
                 }
             })
         }
+        }
+    }
+}
+
+/** Switch to a top-level tab without piling up back-stack entries. */
+private fun androidx.navigation.NavController.switchTab(route: String) {
+    navigate(route) {
+        popUpTo(graph.startDestinationId) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }

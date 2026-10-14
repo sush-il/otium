@@ -49,7 +49,6 @@ import com.focusblock.ui.common.appContainer
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit,
     onOpenSetup: () -> Unit,
     onOpenExcludedApps: () -> Unit,
     onOpenWebContent: () -> Unit,
@@ -65,10 +64,7 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Settings") },
-                navigationIcon = { BackButton(onClick = onBack) },
-            )
+            TopAppBar(title = { Text("Settings") })
         },
     ) { padding ->
         Column(

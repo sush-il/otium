@@ -56,7 +56,6 @@ fun ProfileListScreen(
     onOpenProfile: (Long) -> Unit,
     onNewProfile: () -> Unit,
     onOpenSetup: () -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenModes: () -> Unit,
     onOpenApps: () -> Unit,
     onOpenSites: () -> Unit,
@@ -97,10 +96,7 @@ fun ProfileListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Focus Block") },
-                actions = { TextButton(onClick = onOpenSettings) { Text("Settings") } },
-            )
+            TopAppBar(title = { Text("Focus Block") })
         },
     ) { padding ->
         val list = profiles
