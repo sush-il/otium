@@ -50,13 +50,13 @@ class LimitPause(private val settings: SettingsStore, private val guard: EditGua
             val current = settings.pausedLimits.first()
             if (key in current) {
                 settings.setPausedLimits(current - key)
-                notice = "Limits back on"
+                notice = "Blocking back on"
                 return@launch
             }
             when (val check = guard.checkLoosen()) {
                 EditCheck.Allowed -> {
                     settings.setPausedLimits(current + key)
-                    notice = "Limits paused"
+                    notice = "Blocking paused"
                 }
                 EditCheck.NeedsPassword -> passwordNeededFor = { toggle(key) }
                 is EditCheck.Forbidden -> error = check.reason
@@ -99,7 +99,7 @@ fun PauseButton(paused: Boolean, onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
         Icon(
             imageVector = if (paused) LockOpenFilled else Icons.Filled.Lock,
-            contentDescription = if (paused) "Resume limits" else "Pause limits",
+            contentDescription = if (paused) "Resume blocking" else "Pause blocking",
             tint = if (paused) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
         )
     }
