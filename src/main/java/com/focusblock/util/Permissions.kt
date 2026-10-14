@@ -66,5 +66,8 @@ object Permissions {
     fun appDetailsIntent(context: Context) =
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${context.packageName}".toUri())
 
+    fun notificationSettingsIntent(context: Context) =
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+
     fun accessibilitySettingsIntent() = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
 }

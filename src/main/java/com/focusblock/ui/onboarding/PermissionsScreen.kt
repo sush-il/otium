@@ -24,6 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -121,6 +122,7 @@ fun PermissionsScreen(onDone: () -> Unit) {
                 done = state.notifications,
                 action = "Allow alerts",
                 onAction = { notificationRequest.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                onManage = { context.startActivity(Permissions.notificationSettingsIntent(context)) },
             )
         }
         Step(
@@ -160,7 +162,7 @@ private fun Label(text: String) {
 }
 
 @Composable
-private fun Step(glyph: String, title: String, body: String, done: Boolean, action: String, onAction: () -> Unit) {
+private fun Step(glyph: String, title: String, body: String, done: Boolean, action: String, onAction: () -> Unit, onManage: () -> Unit = onAction) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -195,7 +197,9 @@ private fun Step(glyph: String, title: String, body: String, done: Boolean, acti
                     Text(body, style = MaterialTheme.typography.bodyMedium)
                     FilledTonalButton(onClick = onAction, modifier = Modifier.padding(top = 4.dp)) { Text(action) }
                 } else {
-                    Text("Done", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    Text("On", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    // Android only lets the user switch these off in system Settings, so link there
+                    TextButton(onClick = onManage) { Text("Manage / turn off") }
                 }
             }
         }
