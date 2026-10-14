@@ -24,6 +24,7 @@ import java.time.LocalDateTime
 class ProfileListViewModel(
     private val repository: ProfileRepository,
     private val settings: SettingsStore,
+    appLimits: com.focusblock.data.AppLimitRepository,
     siteLimits: com.focusblock.data.SiteLimitRepository,
     modeStore: ModeStore,
     private val guard: EditGuard,
@@ -35,7 +36,8 @@ class ProfileListViewModel(
     val profiles: StateFlow<List<Profile>?> = stateOf(repository.profiles, null)
     val mode: StateFlow<Mode?> = stateOf(modeStore.state.map { it.mode }, null)
 
-    val appsBlockedCount: StateFlow<Int?> = stateOf(settings.quickBlockedApps.map { it.size }, null)
+    // Distinct apps/hosts that have any rule (always or limit-based)
+    val appsBlockedCount: StateFlow<Int?> = stateOf(appLimits.limits.map { it.map { r -> r.packageName }.distinct().size }, null)
     val sitesBlockedCount: StateFlow<Int?> = stateOf(siteLimits.limits.map { it.map { r -> r.host }.distinct().size }, null)
 
     val keywordsOn: StateFlow<Boolean?> = stateOf(settings.keywordBlockingEnabled.map { it }, null)
