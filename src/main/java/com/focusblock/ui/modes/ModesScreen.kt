@@ -22,6 +22,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -75,6 +78,9 @@ fun ModesScreen(onBack: () -> Unit, onOpenEmergency: () -> Unit) {
     val vm: ModesViewModel = viewModel(factory = viewModelFactory { initializer { ModesViewModel(container.modeStore) } })
     val state by vm.state.collectAsStateWithLifecycle()
 
+    var showLockSheet by remember { mutableStateOf(false) }
+    var showStrictSheet by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -86,26 +92,26 @@ fun ModesScreen(onBack: () -> Unit, onOpenEmergency: () -> Unit) {
         val s = state ?: return@Scaffold
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            ModeCard("Normal", "Change anything and uninstall freely.", s.mode == Mode.NORMAL)
-            ModeCard("Lock", "A password protects Focus Block, phone Settings, uninstalling and loosening profiles.", s.mode == Mode.LOCK)
-            ModeCard(
-                "Strict",
-                "Can't be undone until it ends. Blocks uninstalling and loosening profiles, plus Settings and more if you choose.",
-                s.mode == Mode.STRICT,
-            )
-            HorizontalDivider()
+            ModeCard("Normal", "Change anything freely.", s.mode == Mode.NORMAL)
+            ModeCard("Lock", "Password-protect changes & uninstall.", s.mode == Mode.LOCK)
+            ModeCard("Strict", "Locked until it ends. No undo.", s.mode == Mode.STRICT)
+
             when (s.mode) {
                 Mode.NORMAL -> {
-                    LockSetup(vm)
-                    HorizontalDivider()
-                    StrictSetup(vm)
+                    FilledTonalButton(onClick = { showLockSheet = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Set up Lock mode")
+                    }
+                    FilledTonalButton(onClick = { showStrictSheet = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Set up Strict mode")
+                    }
                 }
                 Mode.LOCK -> {
                     LockActive(vm, s)
-                    HorizontalDivider()
-                    StrictSetup(vm)
+                    FilledTonalButton(onClick = { showStrictSheet = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Switch to Strict mode")
+                    }
                 }
                 Mode.STRICT -> StrictActive(vm, s)
             }
@@ -114,6 +120,24 @@ fun ModesScreen(onBack: () -> Unit, onOpenEmergency: () -> Unit) {
                 EmergencySummary(s, onOpenEmergency)
             }
         }
+    }
+
+    if (showLockSheet) {
+        ModeSheet(onDismiss = { showLockSheet = false }) { LockSetup(vm, onDone = { showLockSheet = false }) }
+    }
+    if (showStrictSheet) {
+        ModeSheet(onDismiss = { showStrictSheet = false }) { StrictSetup(vm, onDone = { showStrictSheet = false }) }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ModeSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) { content() }
     }
 }
 
@@ -124,12 +148,15 @@ private fun ModeCard(title: String, body: String, current: Boolean) {
         colors = if (current) {
             CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         } else {
-            CardDefaults.cardColors()
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
         },
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(if (current) "$title (current)" else title, style = MaterialTheme.typography.titleMedium)
-            Text(body, style = MaterialTheme.typography.bodyMedium)
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (current) Text("● Active", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -137,7 +164,7 @@ private fun ModeCard(title: String, body: String, current: Boolean) {
 // ---------- Lock ----------
 
 @Composable
-private fun LockSetup(vm: ModesViewModel) {
+private fun LockSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
     var password by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var options by remember { mutableStateOf(LockOptions()) }
@@ -195,6 +222,7 @@ private fun LockSetup(vm: ModesViewModel) {
                     pending = null
                     password = ""
                     confirm = ""
+                    onDone()
                 }) { Text("Turn on") }
             },
             dismissButton = { TextButton(onClick = { pending = null }) { Text("Cancel") } },
@@ -241,7 +269,7 @@ private enum class StrictEnd { PRESET, CUSTOM, SCHEDULE }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StrictSetup(vm: ModesViewModel) {
+private fun StrictSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
     val context = LocalContext.current
     var endKind by remember { mutableStateOf(StrictEnd.PRESET) }
     var presetHours by remember { mutableIntStateOf(24) }
@@ -333,6 +361,7 @@ private fun StrictSetup(vm: ModesViewModel) {
             }
             vm.startStrict(until, schedule.takeIf { endKind == StrictEnd.SCHEDULE }, options)
             confirmText = ""
+            onDone()
         },
         enabled = endValid && confirmText.trim().equals("I understand", ignoreCase = true),
         modifier = Modifier.fillMaxWidth(),
