@@ -13,6 +13,7 @@ import dev.sushil.focusblock.ui.modes.ModesScreen
 import dev.sushil.focusblock.ui.onboarding.PermissionsScreen
 import dev.sushil.focusblock.ui.profiles.ProfileEditScreen
 import dev.sushil.focusblock.ui.profiles.ProfileListScreen
+import dev.sushil.focusblock.ui.settings.ExcludedAppsScreen
 import dev.sushil.focusblock.ui.settings.SettingsScreen
 import dev.sushil.focusblock.util.Permissions
 
@@ -23,6 +24,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val MODES = "modes"
     const val EMERGENCY = "emergency"
+    const val EXCLUDED_APPS = "excluded_apps"
 
     fun profileEdit(id: Long) = "profile/$id"
 }
@@ -55,7 +57,11 @@ fun AppNavHost() {
             SettingsScreen(
                 onBack = { nav.popBackStack() },
                 onOpenSetup = { nav.navigate(Routes.PERMISSIONS) },
+                onOpenExcludedApps = { nav.navigate(Routes.EXCLUDED_APPS) },
             )
+        }
+        composable(Routes.EXCLUDED_APPS) {
+            ExcludedAppsScreen(onDone = { nav.popBackStack() })
         }
         composable(
             Routes.PROFILE_EDIT,

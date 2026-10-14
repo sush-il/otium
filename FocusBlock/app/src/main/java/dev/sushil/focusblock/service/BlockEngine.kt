@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.core.net.toUri
 import dev.sushil.focusblock.BuildConfig
 import dev.sushil.focusblock.data.ModeStore
+import dev.sushil.focusblock.data.SettingsStore
 import dev.sushil.focusblock.data.ProfileRepository
 import dev.sushil.focusblock.data.UsageRepository
 import dev.sushil.focusblock.domain.BlockEvaluator
@@ -49,6 +50,7 @@ class BlockEngine(
     profileRepository: ProfileRepository,
     private val usage: UsageRepository,
     modeStore: ModeStore,
+    settingsStore: SettingsStore,
     private val grants: UnlockGrants,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -56,6 +58,7 @@ class BlockEngine(
     // In-memory copy of the rules so a foreground change never waits on the database
     @Volatile private var profiles: List<Profile> = emptyList()
     @Volatile private var modeState = ModeState()
+    @Volatile private var excludedApps: Set<String> = emptySet()
 
     private var current: String? = null
     private var checkJob: Job? = null
@@ -63,6 +66,7 @@ class BlockEngine(
     private var launcherPackage: String? = null
     private var settingsPackage: String? = null
     private var installerPackages: Set<String>? = null
+    private var dialerPackage: String? = null
 
     private val _countdown = MutableStateFlow<Countdown?>(null)
 
@@ -84,6 +88,12 @@ class BlockEngine(
         scope.launch {
             modeStore.state.collect {
                 modeState = it
+                current?.let { pkg -> startWatching(pkg) }
+            }
+        }
+        scope.launch {
+            settingsStore.excludedApps.collect {
+                excludedApps = it
                 current?.let { pkg -> startWatching(pkg) }
             }
         }
@@ -161,10 +171,11 @@ class BlockEngine(
                 // One snapshot per round, so each usage value is read at most once
                 val cached = CachingUsageSource(usage)
                 val now = LocalDateTime.now()
+                val excluded = wholePhoneExcluded()
                 Triple(
-                    BlockEvaluator.evaluate(pkg, now, rules, cached),
-                    BlockEvaluator.nextRecheck(pkg, now, rules, cached),
-                    BlockEvaluator.timeLeft(pkg, now, rules, cached),
+                    BlockEvaluator.evaluate(pkg, now, rules, cached, excluded),
+                    BlockEvaluator.nextRecheck(pkg, now, rules, cached, excluded),
+                    BlockEvaluator.timeLeft(pkg, now, rules, cached, excluded),
                 )
             }
             val (decision, recheckIn, timeLeft) = result
@@ -272,6 +283,23 @@ class BlockEngine(
             pm.queryIntentActivities(intent, 0).forEach { add(it.activityInfo.packageName) }
         }
     }.also { installerPackages = it }
+
+    /** Apps a whole-phone profile must never catch: the user's list plus essentials. */
+    private fun wholePhoneExcluded(): Set<String> = buildSet {
+        addAll(excludedApps)
+        add(context.packageName)
+        launcherPackage()?.let { add(it) }
+        settingsPackage()?.let { add(it) }
+        dialerPackage()?.let { add(it) }
+        currentKeyboardPackage()?.let { add(it) }
+        add(SYSTEM_UI)
+    }
+
+    private fun dialerPackage(): String? =
+        dialerPackage ?: context.packageManager
+            .resolveActivity(Intent(Intent.ACTION_DIAL), PackageManager.MATCH_DEFAULT_ONLY)
+            ?.activityInfo?.packageName
+            .also { dialerPackage = it }
 
     private fun currentKeyboardPackage(): String? =
         Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)

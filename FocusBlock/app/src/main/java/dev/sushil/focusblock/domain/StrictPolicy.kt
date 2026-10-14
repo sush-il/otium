@@ -15,7 +15,9 @@ object StrictPolicy {
         if (new == null) return false // deleting an active profile
         if (!new.enabled) return false
         if (new.type != old.type) return false
-        if (!new.packages.containsAll(old.packages)) return false
+        // Dropping whole-phone coverage, or removing apps, is loosening
+        if (old.wholePhone && !new.wholePhone) return false
+        if (!new.wholePhone && !new.packages.containsAll(old.packages)) return false
         return when (new.type) {
             RuleType.ALWAYS -> true
             // Only allow adding windows; every existing one must still be there unchanged

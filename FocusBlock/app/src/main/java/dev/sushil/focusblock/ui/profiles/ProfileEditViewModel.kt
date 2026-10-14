@@ -33,6 +33,7 @@ class ProfileEditViewModel(
     var hourlyLimitMinutes by mutableIntStateOf(10)
     var launchLimit by mutableIntStateOf(10)
     var blockUntil by mutableStateOf(LocalDateTime.now().plusHours(1).withSecond(0).withNano(0))
+    var wholePhone by mutableStateOf(false)
     // The UI edits one time window; the data model allows several
     var schedule by mutableStateOf(Schedule(daysMask = 0b0011111, startMinute = 9 * 60, endMinute = 17 * 60))
 
@@ -65,13 +66,14 @@ class ProfileEditViewModel(
                 it.launchLimit?.let { limit -> launchLimit = limit }
                 it.blockUntil?.let { until -> blockUntil = until }
                 it.schedules.firstOrNull()?.let { s -> schedule = s }
+                wholePhone = it.wholePhone
             }
             apps = installedApps.allApps()
         }
     }
 
     val canSave: Boolean
-        get() = name.isNotBlank() && selected.isNotEmpty() &&
+        get() = name.isNotBlank() && (wholePhone || selected.isNotEmpty()) &&
             (type != RuleType.SCHEDULE || schedule.daysMask != 0) &&
             (type != RuleType.BLOCK_UNTIL || blockUntil.isAfter(LocalDateTime.now()))
 
@@ -131,6 +133,7 @@ class ProfileEditViewModel(
         // Only keep the settings that belong to the chosen rule type
         dailyLimitMinutes = dailyLimitMinutes.takeIf { type == RuleType.DAILY_LIMIT },
         schedules = if (type == RuleType.SCHEDULE) listOf(schedule) else emptyList(),
+        wholePhone = wholePhone,
         hourlyLimitMinutes = hourlyLimitMinutes.takeIf { type == RuleType.HOURLY_LIMIT },
         launchLimit = launchLimit.takeIf { type == RuleType.LAUNCH_LIMIT },
         blockUntil = blockUntil.takeIf { type == RuleType.BLOCK_UNTIL },

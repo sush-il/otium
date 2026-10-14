@@ -31,10 +31,16 @@ data class Profile(
     val blockUntil: LocalDateTime? = null,
     /** When set and still in the future, the profile is temporarily off (Normal-mode pause). */
     val pausedUntil: LocalDateTime? = null,
+    /** When true the profile targets every app except [excluded], not the [packages] list. */
+    val wholePhone: Boolean = false,
 ) {
     /** Is this profile actually blocking right now? (On, and not paused.) */
     fun isEnforcing(now: LocalDateTime): Boolean =
         enabled && (pausedUntil == null || !now.isBefore(pausedUntil))
+
+    /** Does this profile target [pkg]? [excluded] apps are never caught by a whole-phone profile. */
+    fun targets(pkg: String, excluded: Set<String>): Boolean =
+        if (wholePhone) pkg !in excluded else pkg in packages
 }
 
 /**

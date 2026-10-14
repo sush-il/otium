@@ -19,9 +19,15 @@ import java.time.LocalTime
  */
 object BlockEvaluator {
 
-    fun evaluate(pkg: String, now: LocalDateTime, profiles: List<Profile>, usage: UsageSource): BlockDecision {
+    fun evaluate(
+        pkg: String,
+        now: LocalDateTime,
+        profiles: List<Profile>,
+        usage: UsageSource,
+        excluded: Set<String> = emptySet(),
+    ): BlockDecision {
         // Strictest rule first, so the reason shown is the most useful one
-        val matching = profiles.filter { it.isEnforcing(now) && pkg in it.packages }.sortedBy { it.type.ordinal }
+        val matching = profiles.filter { it.isEnforcing(now) && it.targets(pkg, excluded) }.sortedBy { it.type.ordinal }
         for (profile in matching) {
             val reason = profile.blockReason(pkg, now, usage) ?: continue
             return BlockDecision.Blocked(reason, profile.name)
@@ -72,8 +78,14 @@ object BlockEvaluator {
      * How long until [pkg] may become blocked while it stays open, or null if nothing
      * will change. Used to re-check at the right moment instead of polling.
      */
-    fun nextRecheck(pkg: String, now: LocalDateTime, profiles: List<Profile>, usage: UsageSource): Duration? {
-        val candidates = profiles.filter { it.isEnforcing(now) && pkg in it.packages }.mapNotNull { profile ->
+    fun nextRecheck(
+        pkg: String,
+        now: LocalDateTime,
+        profiles: List<Profile>,
+        usage: UsageSource,
+        excluded: Set<String> = emptySet(),
+    ): Duration? {
+        val candidates = profiles.filter { it.isEnforcing(now) && it.targets(pkg, excluded) }.mapNotNull { profile ->
             when (profile.type) {
                 RuleType.ALWAYS, RuleType.LAUNCH_LIMIT, RuleType.BLOCK_UNTIL -> null
                 RuleType.SCHEDULE -> profile.schedules.mapNotNull { it.nextStart(now) }.minOrNull()
@@ -104,9 +116,10 @@ object BlockEvaluator {
         now: LocalDateTime,
         profiles: List<Profile>,
         usage: UsageSource,
+        excluded: Set<String> = emptySet(),
         scheduleHorizon: Duration = Duration.ofHours(1),
     ): TimeLeft? {
-        val candidates = profiles.filter { it.isEnforcing(now) && pkg in it.packages }.mapNotNull { profile ->
+        val candidates = profiles.filter { it.isEnforcing(now) && it.targets(pkg, excluded) }.mapNotNull { profile ->
             when (profile.type) {
                 RuleType.ALWAYS, RuleType.LAUNCH_LIMIT, RuleType.BLOCK_UNTIL -> null
                 RuleType.SCHEDULE -> profile.schedules.mapNotNull { it.nextStart(now) }.minOrNull()

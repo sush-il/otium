@@ -21,6 +21,7 @@ data class ProfileEntity(
     val launchLimit: Int? = null,
     val blockUntil: Long? = null, // epoch ms
     val pausedUntil: Long? = null, // epoch ms, added in schema v3
+    val wholePhone: Boolean = false, // added in schema v4
 )
 
 @Entity(

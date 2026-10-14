@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -100,15 +101,29 @@ fun ProfileEditScreen(profileId: Long, onClose: () -> Unit) {
                 RuleType.BLOCK_UNTIL -> BlockUntilEditor(vm.blockUntil) { vm.blockUntil = it }
             }
 
-            Text("Apps (${vm.selected.size})", style = MaterialTheme.typography.titleMedium)
-            val labels = vm.apps?.associate { it.packageName to it.label }.orEmpty()
-            vm.selected.sortedBy { labels[it] ?: it }.forEach { pkg ->
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AppIcon(pkg, size = 32.dp)
-                    Text(labels[pkg] ?: pkg)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Block the whole phone", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Every app except your excluded list (Phone, Settings and this app are always safe).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
+                Switch(checked = vm.wholePhone, onCheckedChange = { vm.wholePhone = it })
             }
-            OutlinedButton(onClick = { pickingApps = true }) { Text("Choose apps") }
+
+            if (!vm.wholePhone) {
+                Text("Apps (${vm.selected.size})", style = MaterialTheme.typography.titleMedium)
+                val labels = vm.apps?.associate { it.packageName to it.label }.orEmpty()
+                vm.selected.sortedBy { labels[it] ?: it }.forEach { pkg ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        AppIcon(pkg, size = 32.dp)
+                        Text(labels[pkg] ?: pkg)
+                    }
+                }
+                OutlinedButton(onClick = { pickingApps = true }) { Text("Choose apps") }
+            }
 
             vm.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Button(

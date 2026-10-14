@@ -31,6 +31,7 @@ class ProfileRepository(private val dao: ProfileDao) {
             launchLimit = profile.launchLimit,
             blockUntil = profile.blockUntil?.toEpochMs(),
             pausedUntil = profile.pausedUntil?.toEpochMs(),
+            wholePhone = profile.wholePhone,
         ),
         packages = profile.packages,
         schedules = profile.schedules.map {
@@ -57,6 +58,7 @@ class ProfileRepository(private val dao: ProfileDao) {
         launchLimit = profile.launchLimit,
         blockUntil = profile.blockUntil?.toLocalDateTime(),
         pausedUntil = profile.pausedUntil?.toLocalDateTime(),
+        wholePhone = profile.wholePhone,
     )
 
     private fun LocalDateTime.toEpochMs() = atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()

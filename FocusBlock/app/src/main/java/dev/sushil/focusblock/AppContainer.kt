@@ -25,7 +25,7 @@ class AppContainer(context: Context) {
     val settingsStore = SettingsStore(context)
     val modeStore = ModeStore(context)
     val unlockGrants = UnlockGrants()
-    val blockEngine = BlockEngine(context, profileRepository, usageRepository, modeStore, unlockGrants)
+    val blockEngine = BlockEngine(context, profileRepository, usageRepository, modeStore, settingsStore, unlockGrants)
     val editGuard = EditGuard(modeStore, unlockGrants)
 
     // Process-wide background work that isn't tied to a screen

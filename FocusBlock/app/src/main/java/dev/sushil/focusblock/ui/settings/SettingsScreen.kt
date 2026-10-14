@@ -32,7 +32,7 @@ import dev.sushil.focusblock.ui.common.appContainer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onOpenSetup: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onOpenSetup: () -> Unit, onOpenExcludedApps: () -> Unit) {
     val container = appContainer()
     val vm: SettingsViewModel = viewModel(
         factory = viewModelFactory { initializer { SettingsViewModel(container.settingsStore) } },
@@ -82,6 +82,14 @@ fun SettingsScreen(onBack: () -> Unit, onOpenSetup: () -> Unit) {
                 }
                 Switch(checked = alerts == true, onCheckedChange = vm::setLowTimeAlerts)
             }
+
+            Text("Whole-phone blocking", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+            Text(
+                "Apps that a whole-phone profile should never block.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(onClick = onOpenExcludedApps) { Text("Excluded apps") }
 
             OutlinedButton(onClick = onOpenSetup, modifier = Modifier.padding(top = 8.dp)) {
                 Text("Permissions & setup")
