@@ -40,10 +40,10 @@ class ModesViewModel(private val store: ModeStore) : ViewModel() {
         }
     }
 
-    fun confirmLock(pending: PendingLock, options: LockOptions) {
+    fun confirmLock(pending: PendingLock, options: LockOptions, pin: Boolean) {
         viewModelScope.launch {
             store.update {
-                it.copy(mode = Mode.LOCK, passwordHash = pending.passwordHash, recoveryHash = pending.recoveryHash, lock = options)
+                it.copy(mode = Mode.LOCK, passwordHash = pending.passwordHash, recoveryHash = pending.recoveryHash, pinMode = pin, lock = options)
             }
         }
     }

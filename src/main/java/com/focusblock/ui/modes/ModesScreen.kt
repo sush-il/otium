@@ -165,6 +165,7 @@ private fun ModeCard(title: String, body: String, current: Boolean) {
 
 @Composable
 private fun LockSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
+    var pin by remember { mutableStateOf(true) }
     var password by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var options by remember { mutableStateOf(LockOptions()) }
@@ -172,23 +173,30 @@ private fun LockSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
     var working by remember { mutableStateOf(false) }
 
     Text("Turn on Lock mode", style = MaterialTheme.typography.titleMedium)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(selected = pin, onClick = { pin = true; password = ""; confirm = "" }, label = { Text("PIN (numbers)") })
+        FilterChip(selected = !pin, onClick = { pin = false; password = ""; confirm = "" }, label = { Text("Password") })
+    }
+    val keyboard = KeyboardOptions(keyboardType = if (pin) KeyboardType.NumberPassword else KeyboardType.Password)
+    // PIN: digits only
+    fun clean(v: String) = if (pin) v.filter { it.isDigit() } else v
     OutlinedTextField(
-        value = password, onValueChange = { password = it },
-        label = { Text("Password (6–10 characters)") }, singleLine = true,
+        value = password, onValueChange = { password = clean(it) },
+        label = { Text(if (pin) "PIN (4–10 digits)" else "Password (6–10 characters)") }, singleLine = true,
         visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        keyboardOptions = keyboard,
         modifier = Modifier.fillMaxWidth(),
     )
     OutlinedTextField(
-        value = confirm, onValueChange = { confirm = it },
-        label = { Text("Confirm password") }, singleLine = true,
+        value = confirm, onValueChange = { confirm = clean(it) },
+        label = { Text(if (pin) "Confirm PIN" else "Confirm password") }, singleLine = true,
         visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        keyboardOptions = keyboard,
         isError = confirm.isNotEmpty() && confirm != password,
         modifier = Modifier.fillMaxWidth(),
     )
     LockOptionSwitches(options) { options = it }
-    val valid = password.length in 6..10 && password == confirm
+    val valid = password.length in (if (pin) 4..10 else 6..10) && password == confirm
     Button(
         onClick = {
             working = true
@@ -208,7 +216,7 @@ private fun LockSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
             title = { Text("Save your recovery code") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("If you forget the password, this code turns Lock mode off. It's shown only once. Write it down somewhere off this phone.")
+                    Text("If you forget the PIN or password, this code turns Lock mode off. It's shown only once. Write it down somewhere off this phone.")
                     Text(p.recoveryCode, style = MaterialTheme.typography.headlineSmall, fontFamily = FontFamily.Monospace)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = saved, onCheckedChange = { saved = it })
@@ -218,7 +226,7 @@ private fun LockSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
             },
             confirmButton = {
                 TextButton(enabled = saved, onClick = {
-                    vm.confirmLock(p, options)
+                    vm.confirmLock(p, options, pin)
                     pending = null
                     password = ""
                     confirm = ""

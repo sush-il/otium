@@ -38,6 +38,7 @@ class ModeStore(context: Context) {
         mode = this[MODE]?.let { runCatching { Mode.valueOf(it) }.getOrNull() } ?: Mode.NORMAL,
         passwordHash = this[PASSWORD],
         recoveryHash = this[RECOVERY],
+        pinMode = this[PIN_MODE] ?: false,
         lock = LockOptions(
             lockApp = this[LOCK_APP] ?: true,
             lockSettings = this[LOCK_SETTINGS] ?: true,
@@ -65,6 +66,7 @@ class ModeStore(context: Context) {
         this[MODE] = s.mode.name
         setOrRemove(PASSWORD, s.passwordHash)
         setOrRemove(RECOVERY, s.recoveryHash)
+        this[PIN_MODE] = s.pinMode
         this[LOCK_APP] = s.lock.lockApp
         this[LOCK_SETTINGS] = s.lock.lockSettings
         this[LOCK_PROFILES] = s.lock.lockProfiles
@@ -89,6 +91,7 @@ class ModeStore(context: Context) {
         val MODE = stringPreferencesKey("mode")
         val PASSWORD = stringPreferencesKey("password_hash")
         val RECOVERY = stringPreferencesKey("recovery_hash")
+        val PIN_MODE = booleanPreferencesKey("pin_mode")
         val LOCK_APP = booleanPreferencesKey("lock_app")
         val LOCK_SETTINGS = booleanPreferencesKey("lock_settings")
         val LOCK_PROFILES = booleanPreferencesKey("lock_profiles")

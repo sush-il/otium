@@ -25,6 +25,8 @@ data class ModeState(
     val mode: Mode = Mode.NORMAL,
     val passwordHash: String? = null,
     val recoveryHash: String? = null,
+    /** True when the Lock password is a numeric PIN, so unlock screens show a number pad. */
+    val pinMode: Boolean = false,
     val lock: LockOptions = LockOptions(),
     val strict: StrictOptions = StrictOptions(),
     /** Strict ends at this wall-clock time (epoch ms)… */
