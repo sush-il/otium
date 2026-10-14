@@ -9,14 +9,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,34 +59,54 @@ fun WebContentScreen(onBack: () -> Unit, onOpenSite: (String) -> Unit) {
         },
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 8.dp, 16.dp, 24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item { SectionLabel("Blocked sites") }
-            item { AddRow("Add a site (e.g. youtube.com)") { onOpenSite(vm.normalizeHost(it)) } }
-            items(sites.toList(), key = { "s${it.first}" }) { (host, rules) ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable { onOpenSite(host) }.padding(vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(host, style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            rules.joinToString(" · ") { it.summary() },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+            item { AddField("Add a site, e.g. youtube.com") { onOpenSite(vm.normalizeHost(it)) } }
+            item {
+                if (sites.isEmpty()) {
+                    EmptyHint("No sites yet. Add one above to set its limits.")
+                } else {
+                    GroupCard {
+                        sites.toList().forEachIndexed { i, (host, rules) ->
+                            if (i > 0) RowDivider()
+                            Row(
+                                Modifier.fillMaxWidth().clickable { onOpenSite(host) }.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(host, style = MaterialTheme.typography.bodyLarge)
+                                    Text(
+                                        rules.joinToString(" · ") { it.summary() },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                                Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
-                    Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
             item { SectionLabel("Keywords") }
-            item { AddRow("Add a keyword", onAdd = vm::addKeyword) }
-            items(keywords.orEmpty().toList(), key = { "k$it" }) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(it, Modifier.weight(1f))
-                    TextButton(onClick = { vm.removeKeyword(it) }) { Text("Remove") }
+            item { AddField("Add a keyword", onAdd = vm::addKeyword) }
+            item {
+                val list = keywords.orEmpty().toList()
+                if (list.isEmpty()) {
+                    EmptyHint("Blocks pages or searches containing these words.")
+                } else {
+                    GroupCard {
+                        list.forEachIndexed { i, kw ->
+                            if (i > 0) RowDivider()
+                            Row(Modifier.fillMaxWidth().padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(kw, Modifier.weight(1f))
+                                TextButton(onClick = { vm.removeKeyword(kw) }) { Text("Remove") }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -94,26 +120,54 @@ private fun SectionLabel(text: String) {
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(top = 12.dp, bottom = 2.dp),
+        modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 2.dp),
     )
 }
 
 @Composable
-private fun AddRow(label: String, onAdd: (String) -> Unit) {
+private fun GroupCard(content: @Composable () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) { Column { content() } }
+}
+
+@Composable
+private fun RowDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+    )
+}
+
+@Composable
+private fun EmptyHint(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+    )
+}
+
+/** Full-width field with an inline add action, so the list below stays the focus. */
+@Composable
+private fun AddField(placeholder: String, onAdd: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = text,
-            onValueChange = { text = it },
-            label = { Text(label) },
-            singleLine = true,
-            modifier = Modifier.weight(1f),
-        )
-        Button(onClick = {
-            if (text.isNotBlank()) {
-                onAdd(text)
-                text = ""
-            }
-        }) { Text("Add") }
+    fun submit() {
+        if (text.isNotBlank()) {
+            onAdd(text)
+            text = ""
+        }
     }
+    OutlinedTextField(
+        value = text,
+        onValueChange = { text = it },
+        placeholder = { Text(placeholder) },
+        singleLine = true,
+        trailingIcon = {
+            IconButton(onClick = ::submit) { Icon(Icons.Default.Add, contentDescription = "Add") }
+        },
+        modifier = Modifier.fillMaxWidth(),
+    )
 }

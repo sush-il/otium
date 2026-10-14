@@ -96,7 +96,15 @@ fun ProfileListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Focus Block") })
+            TopAppBar(
+                title = {
+                    Text(
+                        "Focus Block",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+            )
         },
     ) { padding ->
         val list = profiles
