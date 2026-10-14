@@ -20,31 +20,41 @@ class UsageRepository(private val context: Context) : UsageSource {
 
     override fun usedThisHourMs(pkg: String): Long? = foregroundMsSince(pkg, startOfHour())
 
-    /** Milliseconds [pkg] was in the foreground between [start] and now. */
+    /**
+     * Foreground milliseconds for [pkg] between [start] and now, from raw events.
+     *
+     * A foreground span starts on ACTIVITY_RESUMED and ends on ACTIVITY_PAUSED/STOPPED,
+     * on the screen turning off, or on shutdown. Ending on screen-off fixes the old
+     * over-count (a resume with no pause used to count as "open all day"), and counting
+     * the still-open span up to now includes the session the user is in right now, which
+     * Android's aggregated daily total doesn't report until later.
+     */
     private fun foregroundMsSince(pkg: String, start: Long): Long? {
         if (!Permissions.hasUsageAccess(context)) return null
         val now = System.currentTimeMillis()
         val events = usageStats.queryEvents(start, now)
         val event = UsageEvents.Event()
         var total = 0L
-        var resumedAt: Long? = null
-        var seenAny = false
+        var since: Long? = null
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
-            if (event.packageName != pkg) continue
             when (event.eventType) {
-                UsageEvents.Event.ACTIVITY_RESUMED -> if (resumedAt == null) resumedAt = event.timeStamp
-                UsageEvents.Event.ACTIVITY_PAUSED -> {
-                    // A pause with no resume before it: the app was already open at [start]
-                    val from = resumedAt ?: if (!seenAny) start else null
-                    if (from != null) total += event.timeStamp - from
-                    resumedAt = null
-                }
+                UsageEvents.Event.ACTIVITY_RESUMED ->
+                    if (event.packageName == pkg && since == null) since = event.timeStamp
+                UsageEvents.Event.ACTIVITY_PAUSED, UsageEvents.Event.ACTIVITY_STOPPED ->
+                    if (event.packageName == pkg) since = endSpan(since, event.timeStamp) { total += it }
+                // Global events (any package): the app is no longer in front
+                UsageEvents.Event.SCREEN_NON_INTERACTIVE, UsageEvents.Event.DEVICE_SHUTDOWN ->
+                    since = endSpan(since, event.timeStamp) { total += it }
             }
-            seenAny = true
         }
-        resumedAt?.let { total += now - it } // still open
+        since?.let { total += now - it } // still in front right now
         return total
+    }
+
+    private inline fun endSpan(since: Long?, endAt: Long, add: (Long) -> Unit): Long? {
+        since?.let { add(endAt - it) }
+        return null
     }
 
     /** A launch = the app comes to the front after a different app was in front. */

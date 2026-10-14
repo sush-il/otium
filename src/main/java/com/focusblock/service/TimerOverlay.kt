@@ -15,15 +15,21 @@ import com.focusblock.util.formatCountdown
 import kotlin.math.abs
 
 /**
- * Small floating pill on the right edge showing time left. Drag it up/down; tap to
- * show the app name too. A plain View, not Compose: Compose in a WindowManager
- * overlay needs lifecycle/saved-state owners set up by hand.
+ * A tiny handle pinned to the middle of the LEFT edge while a limited app is open.
+ * It shows no number by default — just a small arrow. Tap it to reveal the time left;
+ * tap again to hide it. Drag up/down to reposition. A plain View, not Compose, because
+ * a WindowManager overlay would need lifecycle/saved-state owners wired up by hand.
  */
 class TimerOverlay(private val context: Context) {
 
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private var view: TextView? = null
     private var expanded = false
+
+    // Latest values, so a tap can redraw without waiting for the next tick
+    private var lastLabel = ""
+    private var lastKind = TimeLeft.Kind.LIMIT
+    private var lastRemaining = 0L
 
     private val params = WindowManager.LayoutParams(
         WindowManager.LayoutParams.WRAP_CONTENT,
@@ -33,20 +39,16 @@ class TimerOverlay(private val context: Context) {
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
         PixelFormat.TRANSLUCENT,
     ).apply {
-        gravity = Gravity.END or Gravity.TOP
-        y = dp(160)
+        gravity = Gravity.START or Gravity.CENTER_VERTICAL
     }
 
     val isShowing get() = view != null
 
     fun update(appLabel: String, kind: TimeLeft.Kind, remainingMs: Long) {
-        val v = view ?: createView().also { view = it }
-        val time = formatCountdown(remainingMs)
-        v.text = when {
-            !expanded -> time
-            kind == TimeLeft.Kind.LIMIT -> "$appLabel · $time left today"
-            else -> "$appLabel · blocked in $time"
-        }
+        lastLabel = appLabel
+        lastKind = kind
+        lastRemaining = remainingMs
+        render()
     }
 
     fun hide() {
@@ -55,14 +57,29 @@ class TimerOverlay(private val context: Context) {
         expanded = false
     }
 
+    private fun render() {
+        val v = view ?: createView().also { view = it }
+        if (!expanded) {
+            // Collapsed: just a small arrow, no number
+            v.text = "›"
+            v.setPadding(dp(5), dp(10), dp(7), dp(10))
+        } else {
+            val time = formatCountdown(lastRemaining)
+            v.text = when (lastKind) {
+                TimeLeft.Kind.LIMIT -> "$lastLabel · $time ‹"
+                else -> "$lastLabel · blocked in $time ‹"
+            }
+            v.setPadding(dp(12), dp(8), dp(12), dp(8))
+        }
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private fun createView(): TextView {
         val v = TextView(context).apply {
             setTextColor(0xFFFFFFFF.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setPadding(dp(12), dp(6), dp(12), dp(6))
             background = GradientDrawable().apply {
-                cornerRadius = dp(16).toFloat()
+                cornerRadius = dp(14).toFloat()
                 setColor(0xCC202124.toInt()) // dark, slightly see-through
             }
         }
@@ -81,11 +98,15 @@ class TimerOverlay(private val context: Context) {
                     val dy = event.rawY - downY
                     if (abs(dy) > slop) dragging = true
                     if (dragging) {
-                        params.y = (startY + dy).toInt().coerceAtLeast(0)
+                        // y is an offset from the vertical centre, +/- either way
+                        params.y = (startY + dy).toInt()
                         windowManager.updateViewLayout(v, params)
                     }
                 }
-                MotionEvent.ACTION_UP -> if (!dragging) expanded = !expanded
+                MotionEvent.ACTION_UP -> if (!dragging) {
+                    expanded = !expanded
+                    render()
+                }
             }
             true
         }
