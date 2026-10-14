@@ -37,13 +37,14 @@ fun AppPicker(
     selected: Set<String>,
     onToggle: (String) -> Unit,
     onDone: () -> Unit,
+    title: String = "Choose apps",
 ) {
     var query by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Choose apps (${selected.size})") },
+                title = { Text("$title (${selected.size})") },
                 actions = { TextButton(onClick = onDone) { Text("Done") } },
             )
         },

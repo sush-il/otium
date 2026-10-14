@@ -41,9 +41,14 @@ class SettingsStore(context: Context) {
     val blockFacebookReels: Flow<Boolean> = store.data.map { it[BLOCK_FB_REELS] ?: false }
     val blockAdult: Flow<Boolean> = store.data.map { it[BLOCK_ADULT] ?: false }
 
-    /** Master switches for the home quick controls. On by default. */
+    /** Apps blocked directly from the dashboard, without a profile (always blocked). */
+    val quickBlockedApps: Flow<Set<String>> = store.data.map { it[QUICK_BLOCKED_APPS] ?: emptySet() }
+
+    /** Master switch for app blocking (profiles + the direct list). On by default. */
     val appBlockingEnabled: Flow<Boolean> = store.data.map { it[APP_BLOCKING] ?: true }
-    val siteBlockingEnabled: Flow<Boolean> = store.data.map { it[SITE_BLOCKING] ?: true }
+
+    /** Whether the keyword list is active (sites are always active when non-empty). */
+    val keywordBlockingEnabled: Flow<Boolean> = store.data.map { it[KEYWORD_BLOCKING] ?: true }
 
     /** One switch for all three feeds: on if any feed is blocked. */
     val reelsBlockingEnabled: Flow<Boolean> =
@@ -77,8 +82,9 @@ class SettingsStore(context: Context) {
     suspend fun setBlockFacebookReels(value: Boolean) = store.edit { it[BLOCK_FB_REELS] = value }
     suspend fun setBlockAdult(value: Boolean) = store.edit { it[BLOCK_ADULT] = value }
 
+    suspend fun setQuickBlockedApps(value: Set<String>) = store.edit { it[QUICK_BLOCKED_APPS] = value }
     suspend fun setAppBlockingEnabled(value: Boolean) = store.edit { it[APP_BLOCKING] = value }
-    suspend fun setSiteBlockingEnabled(value: Boolean) = store.edit { it[SITE_BLOCKING] = value }
+    suspend fun setKeywordBlockingEnabled(value: Boolean) = store.edit { it[KEYWORD_BLOCKING] = value }
 
     /** Flip all three feed blockers together from the home quick control. */
     suspend fun setReelsBlockingEnabled(value: Boolean) = store.edit {
@@ -99,8 +105,9 @@ class SettingsStore(context: Context) {
         val BLOCK_IG_REELS = booleanPreferencesKey("block_instagram_reels")
         val BLOCK_FB_REELS = booleanPreferencesKey("block_facebook_reels")
         val BLOCK_ADULT = booleanPreferencesKey("block_adult")
+        val QUICK_BLOCKED_APPS = stringSetPreferencesKey("quick_blocked_apps")
         val APP_BLOCKING = booleanPreferencesKey("app_blocking_enabled")
-        val SITE_BLOCKING = booleanPreferencesKey("site_blocking_enabled")
+        val KEYWORD_BLOCKING = booleanPreferencesKey("keyword_blocking_enabled")
         val DAY_RESET_HOUR = intPreferencesKey("day_reset_hour")
     }
 }

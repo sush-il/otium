@@ -1,5 +1,7 @@
 package com.focusblock.ui.profiles
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,16 +11,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -32,7 +35,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -52,6 +57,9 @@ fun ProfileListScreen(
     onOpenSetup: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenModes: () -> Unit,
+    onOpenApps: () -> Unit,
+    onOpenSites: () -> Unit,
+    onOpenFeeds: () -> Unit,
 ) {
     val container = appContainer()
     val vm: ProfileListViewModel = viewModel(
@@ -93,34 +101,25 @@ fun ProfileListScreen(
                 actions = { TextButton(onClick = onOpenSettings) { Text("Settings") } },
             )
         },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = onNewProfile) { Text("New profile") }
-        },
     ) { padding ->
         val list = profiles
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
+            contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (!blockerReady) item { BlockerOffBanner(onOpenSetup) }
 
             item { ModeCard(mode, onOpenModes) }
-            item { QuickControls(vm) }
 
-            item {
-                Text("Profiles", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 4.dp))
-            }
+            item { SectionHeader("Quick Actions") }
+            item { QuickActions(vm, onOpenApps, onOpenSites, onOpenFeeds) }
+
+            item { SectionHeader("Profiles") }
+            item { AddProfileButton(onNewProfile) }
             when {
                 list == null -> item {
                     Box(Modifier.fillMaxWidth().padding(24.dp), Alignment.Center) { CircularProgressIndicator() }
-                }
-                list.isEmpty() -> item {
-                    Text(
-                        "No profiles yet. Tap \"New profile\" to choose apps to block.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(vertical = 8.dp),
-                    )
                 }
                 else -> items(list, key = { it.id }) { profile ->
                     ProfileCard(
@@ -137,67 +136,145 @@ fun ProfileListScreen(
 }
 
 @Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(top = 4.dp),
+    )
+}
+
+@Composable
 private fun ModeCard(mode: Mode?, onOpenModes: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenModes)) {
+    val level = when (mode) {
+        Mode.LOCK -> 2
+        Mode.STRICT -> 3
+        else -> 1
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenModes),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+    ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Mode", style = MaterialTheme.typography.titleMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(Mode.NORMAL to "Normal", Mode.LOCK to "Lock", Mode.STRICT to "Strict").forEach { (value, label) ->
-                    FilterChip(selected = mode == value, onClick = onOpenModes, label = { Text(label) })
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    when (mode) {
+                        Mode.LOCK -> "Lock Mode"
+                        Mode.STRICT -> "Strict Mode"
+                        else -> "Normal Mode"
+                    },
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                // Strictness level: filled pips grow with the mode
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    repeat(3) { i ->
+                        Box(
+                            Modifier.size(10.dp).background(
+                                if (i < level) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.25f),
+                                CircleShape,
+                            ),
+                        )
+                    }
                 }
             }
             Text(
                 when (mode) {
                     Mode.LOCK -> "A password protects your settings. Tap to manage."
-                    Mode.STRICT -> "Changes are locked until Strict ends. Tap to manage."
-                    else -> "Change anything freely. Tap to set up Lock or Strict."
+                    Mode.STRICT -> "Locked until Strict ends. Tap to manage."
+                    else -> "Make any changes and uninstall the app freely. Tap to change."
                 },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
     }
 }
 
 @Composable
-private fun QuickControls(vm: ProfileListViewModel) {
-    val apps by vm.appBlocking.collectAsStateWithLifecycle()
-    val sites by vm.siteBlocking.collectAsStateWithLifecycle()
-    val reels by vm.reelsBlocking.collectAsStateWithLifecycle()
-    val adult by vm.adultBlocking.collectAsStateWithLifecycle()
+private fun QuickActions(
+    vm: ProfileListViewModel,
+    onOpenApps: () -> Unit,
+    onOpenSites: () -> Unit,
+    onOpenFeeds: () -> Unit,
+) {
+    val apps by vm.appsBlockedCount.collectAsStateWithLifecycle()
+    val sites by vm.sitesBlockedCount.collectAsStateWithLifecycle()
+    val keywords by vm.keywordsOn.collectAsStateWithLifecycle()
+    val adult by vm.adultOn.collectAsStateWithLifecycle()
+    val reels by vm.reelsOn.collectAsStateWithLifecycle()
 
-    Text("Quick controls", style = MaterialTheme.typography.titleMedium)
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToggleTile("Apps", apps, Modifier.weight(1f)) { vm.setQuick(ProfileListViewModel.Quick.APPS, it) }
-        ToggleTile("Sites", sites, Modifier.weight(1f)) { vm.setQuick(ProfileListViewModel.Quick.SITES, it) }
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToggleTile("Reels & Shorts", reels, Modifier.weight(1f)) { vm.setQuick(ProfileListViewModel.Quick.REELS, it) }
-        ToggleTile("Adult sites", adult, Modifier.weight(1f)) { vm.setQuick(ProfileListViewModel.Quick.ADULT, it) }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        CountRow("📱", "${apps ?: 0}", "Apps Blocked", onOpenApps)
+        CountRow("🌐", "${sites ?: 0}", "Sites Blocked", onOpenSites)
+        ToggleRow("🔤", "Keywords Blocked", keywords, onConfigure = onOpenSites) { vm.setQuick(ProfileListViewModel.Quick.KEYWORDS, it) }
+        ToggleRow("🔞", "Block Adult Content", adult, onConfigure = null) { vm.setQuick(ProfileListViewModel.Quick.ADULT, it) }
+        ToggleRow("🎬", "Block Reels / Shorts", reels, onConfigure = onOpenFeeds) { vm.setQuick(ProfileListViewModel.Quick.REELS, it) }
     }
 }
 
 @Composable
-private fun ToggleTile(label: String, checked: Boolean?, modifier: Modifier = Modifier, onChange: (Boolean) -> Unit) {
-    val on = checked == true
-    Card(
-        modifier = modifier,
-        colors = if (on) {
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        } else {
-            CardDefaults.cardColors()
-        },
-    ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                Switch(checked = on, onCheckedChange = onChange)
+private fun Badge(glyph: String) {
+    Box(
+        Modifier.size(44.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) { Text(glyph, fontSize = 20.sp) }
+}
+
+@Composable
+private fun CountRow(glyph: String, count: String, label: String, onClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Badge(glyph)
+            Column(Modifier.weight(1f)) {
+                Text(count, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            Text("›", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ToggleRow(glyph: String, label: String, on: Boolean?, onConfigure: (() -> Unit)?, onChange: (Boolean) -> Unit) {
+    val checked = on == true
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Badge(glyph)
+            Column(Modifier.weight(1f)) {
+                Text(if (checked) "On" else "Off", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (onConfigure != null) {
+                    TextButton(onClick = onConfigure, contentPadding = PaddingValues(0.dp)) { Text("Configure →") }
+                }
+            }
+            Switch(checked = checked, onCheckedChange = onChange)
+        }
+    }
+}
+
+@Composable
+private fun AddProfileButton(onClick: () -> Unit) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("＋", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
             Text(
-                if (on) "On" else "Off",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                "Add a new profile",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
             )
+            Text("→", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

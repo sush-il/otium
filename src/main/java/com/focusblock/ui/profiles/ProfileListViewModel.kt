@@ -5,37 +5,41 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.focusblock.data.ModeStore
 import com.focusblock.data.ProfileRepository
 import com.focusblock.data.SettingsStore
 import com.focusblock.domain.model.Mode
 import com.focusblock.domain.model.Profile
 import com.focusblock.ui.common.EditCheck
 import com.focusblock.ui.common.EditGuard
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
 
-/** The home screen: profiles, the current mode, and the quick on/off controls. */
+/** The dashboard: current mode, quick controls, and profiles. */
 class ProfileListViewModel(
     private val repository: ProfileRepository,
     private val settings: SettingsStore,
-    modeStore: com.focusblock.data.ModeStore,
+    modeStore: ModeStore,
     private val guard: EditGuard,
 ) : ViewModel() {
 
-    private fun <T> stateOf(flow: kotlinx.coroutines.flow.Flow<T>, initial: T): StateFlow<T> =
+    private fun <T> stateOf(flow: Flow<T>, initial: T): StateFlow<T> =
         flow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial)
 
-    // null = still loading
     val profiles: StateFlow<List<Profile>?> = stateOf(repository.profiles, null)
     val mode: StateFlow<Mode?> = stateOf(modeStore.state.map { it.mode }, null)
 
-    val appBlocking: StateFlow<Boolean?> = stateOf(settings.appBlockingEnabled.map { it }, null)
-    val siteBlocking: StateFlow<Boolean?> = stateOf(settings.siteBlockingEnabled.map { it }, null)
-    val reelsBlocking: StateFlow<Boolean?> = stateOf(settings.reelsBlockingEnabled.map { it }, null)
-    val adultBlocking: StateFlow<Boolean?> = stateOf(settings.blockAdult.map { it }, null)
+    val appsBlockedCount: StateFlow<Int?> = stateOf(settings.quickBlockedApps.map { it.size }, null)
+    val sitesBlockedCount: StateFlow<Int?> = stateOf(settings.blockedSites.map { it.size }, null)
+
+    val keywordsOn: StateFlow<Boolean?> = stateOf(settings.keywordBlockingEnabled.map { it }, null)
+    val adultOn: StateFlow<Boolean?> = stateOf(settings.blockAdult.map { it }, null)
+    val reelsOn: StateFlow<Boolean?> = stateOf(settings.reelsBlockingEnabled.map { it }, null)
 
     /** Message when the current mode refuses a change. */
     var error by mutableStateOf<String?>(null)
@@ -45,7 +49,7 @@ class ProfileListViewModel(
     var passwordNeededFor by mutableStateOf<(() -> Unit)?>(null)
         private set
 
-    enum class Quick { APPS, SITES, REELS, ADULT }
+    enum class Quick { KEYWORDS, ADULT, REELS }
 
     fun setQuick(which: Quick, enabled: Boolean) {
         // Turning protection ON is always fine; turning OFF is loosening and is guarded
@@ -63,10 +67,9 @@ class ProfileListViewModel(
     }
 
     private suspend fun apply(which: Quick, enabled: Boolean) = when (which) {
-        Quick.APPS -> settings.setAppBlockingEnabled(enabled)
-        Quick.SITES -> settings.setSiteBlockingEnabled(enabled)
-        Quick.REELS -> settings.setReelsBlockingEnabled(enabled)
+        Quick.KEYWORDS -> settings.setKeywordBlockingEnabled(enabled)
         Quick.ADULT -> settings.setBlockAdult(enabled)
+        Quick.REELS -> settings.setReelsBlockingEnabled(enabled)
     }
 
     fun setEnabled(profile: Profile, enabled: Boolean) {
@@ -82,7 +85,7 @@ class ProfileListViewModel(
     fun pause(profile: Profile, minutes: Long) {
         viewModelScope.launch {
             when (val check = guard.checkPause(profile)) {
-                EditCheck.Allowed -> repository.setPausedUntil(profile.id, java.time.LocalDateTime.now().plusMinutes(minutes))
+                EditCheck.Allowed -> repository.setPausedUntil(profile.id, LocalDateTime.now().plusMinutes(minutes))
                 EditCheck.NeedsPassword -> passwordNeededFor = { pause(profile, minutes) }
                 is EditCheck.Forbidden -> error = check.reason
             }

@@ -161,6 +161,9 @@ class TrackingService : Service() {
     /** Shows the open app's time left the way the user chose, and fires low-time alerts. */
     private suspend fun showCountdown(countdown: Countdown?, display: TimerDisplay, alertsOn: Boolean) {
         if (countdown == null) {
+            // Grace period: ignore brief gaps (a re-check or a sub-window change) so the arrow
+            // doesn't flicker. collectLatest cancels this wait if a new countdown arrives.
+            delay(GRACE_HIDE_MS)
             overlay.hide()
             updateNotification(null)
             return
@@ -200,8 +203,11 @@ class TrackingService : Service() {
     private fun isKeyguardLocked() = getSystemService(KeyguardManager::class.java).isKeyguardLocked
 
     private fun createStatusChannel() {
+        // IMPORTANCE_MIN keeps the service alive but hides the status-bar icon and collapses
+        // the notification to the bottom of the shade (a foreground service must keep some
+        // notification on Android 8+, so this is as hidden as it can be without disabling it).
         getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, getString(R.string.channel_status), NotificationManager.IMPORTANCE_LOW).apply {
+            NotificationChannel(CHANNEL_ID, getString(R.string.channel_status), NotificationManager.IMPORTANCE_MIN).apply {
                 setShowBadge(false)
             },
         )
@@ -226,6 +232,7 @@ class TrackingService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
             .setSubText(emergencyText)
         if (countdown == null) return builder.setContentTitle(getString(R.string.notification_active)).build()
 
@@ -248,6 +255,7 @@ class TrackingService : Service() {
         private const val CHANNEL_ID = "status"
         private const val NOTIFICATION_ID = 1
         private const val POLL_INTERVAL_MS = 300L
+        private const val GRACE_HIDE_MS = 2500L
 
         /** Safe to call often: starting a running service just calls onStartCommand again. */
         fun start(context: Context) {

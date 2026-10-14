@@ -12,6 +12,7 @@ import com.focusblock.ui.modes.EmergencyScreen
 import com.focusblock.ui.modes.ModesScreen
 import com.focusblock.ui.onboarding.PermissionsScreen
 import com.focusblock.ui.profiles.ProfileEditScreen
+import com.focusblock.ui.apps.ManageBlockedAppsScreen
 import com.focusblock.ui.profiles.ProfileListScreen
 import com.focusblock.ui.settings.ExcludedAppsScreen
 import com.focusblock.ui.settings.FeedsScreen
@@ -29,6 +30,7 @@ object Routes {
     const val EXCLUDED_APPS = "excluded_apps"
     const val WEB_CONTENT = "web_content"
     const val FEEDS = "feeds"
+    const val MANAGE_APPS = "manage_apps"
 
     fun profileEdit(id: Long) = "profile/$id"
 }
@@ -49,7 +51,13 @@ fun AppNavHost() {
                 onOpenSetup = { nav.navigate(Routes.PERMISSIONS) },
                 onOpenSettings = { nav.navigate(Routes.SETTINGS) },
                 onOpenModes = { nav.navigate(Routes.MODES) },
+                onOpenApps = { nav.navigate(Routes.MANAGE_APPS) },
+                onOpenSites = { nav.navigate(Routes.WEB_CONTENT) },
+                onOpenFeeds = { nav.navigate(Routes.FEEDS) },
             )
+        }
+        composable(Routes.MANAGE_APPS) {
+            ManageBlockedAppsScreen(onDone = { nav.popBackStack() })
         }
         composable(Routes.MODES) {
             ModesScreen(onBack = { nav.popBackStack() }, onOpenEmergency = { nav.navigate(Routes.EMERGENCY) })

@@ -21,6 +21,7 @@ import com.focusblock.domain.UsageSource
 import com.focusblock.domain.model.BlockDecision
 import com.focusblock.domain.model.ModeState
 import com.focusblock.domain.model.Profile
+import com.focusblock.domain.model.RuleType
 import com.focusblock.domain.model.TimeLeft
 import com.focusblock.ui.block.BlockActivity
 import com.focusblock.ui.lock.PasswordGateActivity
@@ -70,7 +71,8 @@ class BlockEngine(
     @Volatile private var enabledSectionKeys: Set<String> = emptySet()
     @Volatile private var blockAdult: Boolean = false
     @Volatile private var appBlockingEnabled: Boolean = true
-    @Volatile private var siteBlockingEnabled: Boolean = true
+    @Volatile private var keywordBlockingEnabled: Boolean = true
+    @Volatile private var quickBlockedApps: Set<String> = emptySet()
 
     private var current: String? = null
     private var checkJob: Job? = null
@@ -118,7 +120,13 @@ class BlockEngine(
                 current?.let { pkg -> startWatching(pkg) }
             }
         }
-        scope.launch { settingsStore.siteBlockingEnabled.collect { siteBlockingEnabled = it } }
+        scope.launch { settingsStore.keywordBlockingEnabled.collect { keywordBlockingEnabled = it } }
+        scope.launch {
+            settingsStore.quickBlockedApps.collect {
+                quickBlockedApps = it
+                current?.let { pkg -> startWatching(pkg) }
+            }
+        }
         scope.launch {
             combine(
                 settingsStore.blockYoutubeShorts,
@@ -148,11 +156,11 @@ class BlockEngine(
     /** Browser address-bar text changed: send the user home if it's a blocked site/search. */
     fun onBrowserText(pkg: String, text: String) {
         val sites = buildSet {
-            if (siteBlockingEnabled) addAll(blockedSites)
+            addAll(blockedSites)
             if (blockAdult) addAll(content.adultDomains)
         }
         val keywords = buildSet {
-            if (siteBlockingEnabled) addAll(blockedKeywords)
+            if (keywordBlockingEnabled) addAll(blockedKeywords)
             if (blockAdult) addAll(content.adultKeywords)
         }
         if (sites.isEmpty() && keywords.isEmpty()) return
@@ -227,8 +235,15 @@ class BlockEngine(
             null -> Unit
         }
         while (true) {
-            // Master app-blocking switch: when off, profiles don't block anything
-            val rules = if (appBlockingEnabled) profiles else emptyList()
+            // Master app-blocking switch: when off, nothing app-based blocks.
+            // Directly-blocked apps act like a built-in "always" profile.
+            val rules = if (!appBlockingEnabled) {
+                emptyList()
+            } else if (quickBlockedApps.isEmpty()) {
+                profiles
+            } else {
+                profiles + Profile(id = -1L, name = "Blocked apps", type = RuleType.ALWAYS, packages = quickBlockedApps)
+            }
             // Reading usage stats is a slow system call, keep it off the main thread
             val result = withContext(Dispatchers.Default) {
                 // One snapshot per round, so each usage value is read at most once
