@@ -125,7 +125,7 @@ private fun UsageAccessWarning() {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                "Daily limits need Usage access to know how long apps were used. Until it's on, this limit won't block.",
+                "Daily limits need Usage access to know how long apps were used. Until it's on, these apps stay blocked.",
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             OutlinedButton(onClick = { context.startActivity(Permissions.usageAccessIntent()) }) {

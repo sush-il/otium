@@ -46,7 +46,7 @@ class ProfileEditViewModel(
                 it.dailyLimitMinutes?.let { limit -> dailyLimitMinutes = limit }
                 it.schedules.firstOrNull()?.let { s -> schedule = s }
             }
-            apps = installedApps.launchableApps()
+            apps = installedApps.allApps()
         }
     }
 

@@ -37,8 +37,9 @@ object BlockEvaluator {
 
                 RuleType.DAILY_LIMIT -> {
                     val limit = profile.dailyLimitMinutes ?: continue
-                    // No usage access: fail open rather than blocking forever
-                    val used = usedTodayMs(pkg) ?: continue
+                    // No usage access: fail closed, otherwise revoking it would be an easy bypass
+                    val used = usedTodayMs(pkg)
+                        ?: return BlockDecision.Blocked("Usage access is off, so the daily limit can't be checked (\"${profile.name}\")", profile.name)
                     if (used >= limit * 60_000L) {
                         return BlockDecision.Blocked("Daily limit of $limit min reached (\"${profile.name}\")", profile.name)
                     }

@@ -27,7 +27,7 @@ fun AppNavHost() {
     val context = LocalContext.current
     // First launch (or blocker switched off): go through setup first
     val start = remember {
-        if (Permissions.isAccessibilityEnabled(context)) Routes.PROFILES else Routes.PERMISSIONS
+        if (Permissions.hasRequired(context)) Routes.PROFILES else Routes.PERMISSIONS
     }
     NavHost(navController = nav, startDestination = start) {
         composable(Routes.PROFILES) {

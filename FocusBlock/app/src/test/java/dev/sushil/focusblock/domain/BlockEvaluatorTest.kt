@@ -71,9 +71,9 @@ class BlockEvaluatorTest {
         assertTrue(evaluate(at(12, 10), p, usedMs = 30 * 60_000L) is BlockDecision.Blocked)
     }
 
-    @Test fun `daily limit without usage access fails open`() {
+    @Test fun `daily limit without usage access fails closed`() {
         val p = profile(RuleType.DAILY_LIMIT, limit = 1)
-        assertEquals(BlockDecision.Allowed, evaluate(at(12, 10), p, usedMs = null))
+        assertTrue(evaluate(at(12, 10), p, usedMs = null) is BlockDecision.Blocked)
     }
 
     @Test fun `recheck at remaining limit time`() {

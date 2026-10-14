@@ -55,7 +55,7 @@ fun ProfileListScreen(
     val context = LocalContext.current
     var blockerOn by remember { mutableStateOf(true) }
     LifecycleResumeEffect(Unit) {
-        blockerOn = Permissions.isAccessibilityEnabled(context)
+        blockerOn = Permissions.hasRequired(context)
         onPauseOrDispose { }
     }
 
@@ -102,7 +102,7 @@ private fun BlockerOffBanner(onClick: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
     ) {
         Text(
-            "Blocker is off. Tap to set it up.",
+            "Blocker setup isn't finished. Tap to fix.",
             modifier = Modifier.padding(16.dp),
             color = MaterialTheme.colorScheme.onErrorContainer,
         )
