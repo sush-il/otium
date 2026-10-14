@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.util.Log
 import androidx.core.net.toUri
 import com.focusblock.BuildConfig
+import com.focusblock.data.AppLimitRepository
 import com.focusblock.data.ModeStore
 import com.focusblock.data.SettingsStore
 import com.focusblock.data.ProfileRepository
@@ -52,6 +53,7 @@ import java.time.format.DateTimeFormatter
 class BlockEngine(
     private val context: Context,
     profileRepository: ProfileRepository,
+    appLimitRepository: AppLimitRepository,
     private val usage: UsageRepository,
     modeStore: ModeStore,
     settingsStore: SettingsStore,
@@ -71,7 +73,7 @@ class BlockEngine(
     @Volatile private var blockAdult: Boolean = false
     @Volatile private var appBlockingEnabled: Boolean = true
     @Volatile private var keywordBlockingEnabled: Boolean = true
-    @Volatile private var quickBlockedApps: Set<String> = emptySet()
+    @Volatile private var appLimitProfiles: List<Profile> = emptyList()
 
     private var current: String? = null
     private var checkJob: Job? = null
@@ -121,8 +123,8 @@ class BlockEngine(
         }
         scope.launch { settingsStore.keywordBlockingEnabled.collect { keywordBlockingEnabled = it } }
         scope.launch {
-            settingsStore.quickBlockedApps.collect {
-                quickBlockedApps = it
+            appLimitRepository.limits.collect { limits ->
+                appLimitProfiles = limits.map { it.asProfile() }
                 current?.let { pkg -> startWatching(pkg) }
             }
         }
@@ -235,14 +237,8 @@ class BlockEngine(
         }
         while (true) {
             // Master app-blocking switch: when off, nothing app-based blocks.
-            // Directly-blocked apps act like a built-in "always" profile.
-            val rules = if (!appBlockingEnabled) {
-                emptyList()
-            } else if (quickBlockedApps.isEmpty()) {
-                profiles
-            } else {
-                profiles + Profile(id = -1L, name = "Blocked apps", type = RuleType.ALWAYS, packages = quickBlockedApps)
-            }
+            // Directly-blocked apps are one-app profiles synthesised from their stacked rules.
+            val rules = if (!appBlockingEnabled) emptyList() else profiles + appLimitProfiles
             // Reading usage stats is a slow system call, keep it off the main thread
             val result = withContext(Dispatchers.Default) {
                 // One snapshot per round, so each usage value is read at most once

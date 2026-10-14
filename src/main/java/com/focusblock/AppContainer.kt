@@ -1,6 +1,7 @@
 package com.focusblock
 
 import android.content.Context
+import com.focusblock.data.AppLimitRepository
 import com.focusblock.data.BrowserRegistry
 import com.focusblock.data.BackupManager
 import com.focusblock.data.ContentRegistry
@@ -18,6 +19,7 @@ import com.focusblock.ui.common.EditGuard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /** Manual dependency injection: one shared instance of each dependency for the whole app. */
@@ -25,6 +27,7 @@ class AppContainer(context: Context) {
     private val database = AppDatabase.create(context)
 
     val profileRepository = ProfileRepository(database.profileDao())
+    val appLimitRepository = AppLimitRepository(database.appLimitDao())
     val installedAppsRepository = InstalledAppsRepository(context)
     val usageRepository = UsageRepository(context)
     val settingsStore = SettingsStore(context)
@@ -32,7 +35,7 @@ class AppContainer(context: Context) {
     val unlockGrants = UnlockGrants()
     private val browserRegistry = BrowserRegistry(context)
     private val contentRegistry = ContentRegistry(context)
-    val blockEngine = BlockEngine(context, profileRepository, usageRepository, modeStore, settingsStore, browserRegistry, contentRegistry, unlockGrants)
+    val blockEngine = BlockEngine(context, profileRepository, appLimitRepository, usageRepository, modeStore, settingsStore, browserRegistry, contentRegistry, unlockGrants)
     val editGuard = EditGuard(modeStore, unlockGrants)
     val backupManager = BackupManager(context, profileRepository, settingsStore)
 
@@ -44,6 +47,14 @@ class AppContainer(context: Context) {
         BlockOverlayController(context, blockEngine, settingsStore, appScope).start()
         appScope.launch {
             settingsStore.dayResetHour.collect { usageRepository.dayResetHour = it }
+        }
+        // One-time: move old directly-blocked apps into the stackable app-limits table
+        appScope.launch {
+            val legacy = settingsStore.quickBlockedApps.first()
+            if (legacy.isNotEmpty()) {
+                legacy.forEach { appLimitRepository.addAlwaysIfAbsent(it) }
+                settingsStore.setQuickBlockedApps(emptySet())
+            }
         }
     }
 }

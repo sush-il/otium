@@ -17,6 +17,7 @@ import com.focusblock.ui.modes.EmergencyScreen
 import com.focusblock.ui.modes.ModesScreen
 import com.focusblock.ui.onboarding.PermissionsScreen
 import com.focusblock.ui.profiles.ProfileEditScreen
+import com.focusblock.ui.apps.AppLimitEditorScreen
 import com.focusblock.ui.apps.ManageBlockedAppsScreen
 import com.focusblock.ui.profiles.ProfileListScreen
 import com.focusblock.ui.settings.ExcludedAppsScreen
@@ -36,6 +37,9 @@ object Routes {
     const val WEB_CONTENT = "web_content"
     const val FEEDS = "feeds"
     const val MANAGE_APPS = "manage_apps"
+    const val APP_LIMIT = "app_limit/{pkg}"
+
+    fun appLimit(pkg: String) = "app_limit/$pkg"
 
     fun profileEdit(id: Long) = "profile/$id"
 }
@@ -74,7 +78,19 @@ fun AppNavHost() {
             )
         }
         composable(Routes.MANAGE_APPS) {
-            ManageBlockedAppsScreen(onDone = { nav.popBackStack() })
+            ManageBlockedAppsScreen(
+                onBack = { nav.popBackStack() },
+                onOpenApp = { pkg -> nav.navigate(Routes.appLimit(pkg)) },
+            )
+        }
+        composable(
+            Routes.APP_LIMIT,
+            arguments = listOf(navArgument("pkg") { type = NavType.StringType }),
+        ) { entry ->
+            AppLimitEditorScreen(
+                packageName = entry.arguments?.getString("pkg").orEmpty(),
+                onBack = { nav.popBackStack() },
+            )
         }
         composable(Routes.MODES) {
             ModesScreen(onBack = { nav.popBackStack() }, onOpenEmergency = { nav.navigate(Routes.EMERGENCY) })
