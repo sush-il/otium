@@ -48,7 +48,6 @@ fun AppRoot(openEmergency: Boolean, onEmergencyClosed: () -> Unit) {
                 PasswordForm(
                     action = "open Focus Block",
                     onUnlocked = {}, // the mode flips to Normal, which opens the app
-                    onForgot = { showEmergency = true },
                 )
             }
         }

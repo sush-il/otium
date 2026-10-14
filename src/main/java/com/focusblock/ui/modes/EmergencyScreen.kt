@@ -81,7 +81,7 @@ class EmergencyViewModel(private val store: ModeStore) : ViewModel() {
 
     private fun start() {
         viewModelScope.launch {
-            store.update { it.copy(emergency = EmergencyUnlock.start(it.emergency, it.mode, System.currentTimeMillis())) }
+            store.update { it.copy(emergency = EmergencyUnlock.start(it.emergency, System.currentTimeMillis())) }
         }
         typed = ""
     }
@@ -128,9 +128,9 @@ fun EmergencyScreen(onClose: () -> Unit) {
             }
             when (s.emergency.phase) {
                 EmergencyState.Phase.IDLE -> {
-                    val wait = EmergencyUnlock.waitFor(s.mode, s.emergency.history, System.currentTimeMillis())
+                    val wait = EmergencyUnlock.waitFor(s.emergency.history, System.currentTimeMillis())
                     Text(
-                        "This is the slow way out of ${if (s.mode == Mode.STRICT) "Strict" else "Lock"} mode. " +
+                        "This is the slow way out of Strict mode. " +
                             "Type the text below exactly. Then wait ${formatHours(wait)} of phone-on time (time with the phone off " +
                             "doesn't count). Your rules stay on while you wait. Each use in the last 30 days doubles the next wait.",
                     )

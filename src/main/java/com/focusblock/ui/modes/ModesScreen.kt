@@ -104,18 +104,21 @@ fun ModesScreen(onBack: () -> Unit, onOpenEmergency: () -> Unit) {
 
             when (s.mode) {
                 Mode.NORMAL -> {
-                    if (s.hasLock) {
+                    // A pending automatic re-lock offers one tap to lock now; otherwise Lock is set up (again) from scratch
+                    val relockAt = s.relockAt.takeIf { s.hasLock }
+                    if (relockAt != null) {
                         Button(onClick = vm::relock, modifier = Modifier.fillMaxWidth()) { Text("Turn Lock mode back on") }
-                        s.relockAt?.let { at ->
-                            Text(
-                                "Lock turns back on by itself at " + java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()).toLocalTime().let { "%02d:%02d".format(it.hour, it.minute) } + ".",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                        Text(
+                            "Lock turns back on by itself at " +
+                                java.time.Instant.ofEpochMilli(relockAt).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+                                    .let { "%02d:%02d".format(it.hour, it.minute) } + ".",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        FilledTonalButton(onClick = { showLockSheet = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (s.hasLock) "Set up Lock mode again" else "Set up Lock mode")
                         }
-                    }
-                    FilledTonalButton(onClick = { showLockSheet = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (s.hasLock) "Set up Lock mode again" else "Set up Lock mode")
                     }
                     FilledTonalButton(onClick = { showStrictSheet = true }, modifier = Modifier.fillMaxWidth()) {
                         Text("Set up Strict mode")
@@ -129,7 +132,7 @@ fun ModesScreen(onBack: () -> Unit, onOpenEmergency: () -> Unit) {
                 }
                 Mode.STRICT -> StrictActive(vm, s)
             }
-            if (s.mode != Mode.NORMAL) {
+            if (s.mode == Mode.STRICT) {
                 HorizontalDivider()
                 EmergencySummary(s, onOpenEmergency)
             }
@@ -424,7 +427,7 @@ private fun EmergencySummary(s: ModeState, onOpen: () -> Unit) {
     Text(
         when (s.emergency.phase) {
             EmergencyState.Phase.IDLE ->
-                "Need out early? Takes ${formatHours(EmergencyUnlock.waitFor(s.mode, s.emergency.history, now))} " +
+                "Need out early? Takes ${formatHours(EmergencyUnlock.waitFor(s.emergency.history, now))} " +
                     "of phone-on time. Used $recent time(s) in the last 30 days."
             EmergencyState.Phase.WAITING -> "Waiting: ${formatHours(s.emergency.remainingMs)} left."
             EmergencyState.Phase.WINDOW -> "Ready now, for a few minutes."

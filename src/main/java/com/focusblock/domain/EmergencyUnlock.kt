@@ -2,34 +2,31 @@ package com.focusblock.domain
 
 import com.focusblock.domain.model.EmergencyState
 import com.focusblock.domain.model.EmergencyState.Phase
-import com.focusblock.domain.model.Mode
 import java.security.SecureRandom
 
 /**
- * The slow way out of Lock/Strict mode when the password or recovery code is lost.
+ * The slow way out of Strict mode (Lock mode is escaped by typing its number instead).
  * Pure state transitions; the caller feeds in phone-on time with [tick].
  */
 object EmergencyUnlock {
     const val HOUR_MS = 3_600_000L
-    const val LOCK_WAIT_MS = 24 * HOUR_MS
-    const val STRICT_WAIT_MS = 72 * HOUR_MS
+    const val BASE_WAIT_MS = HOUR_MS
     const val MAX_WAIT_MS = 7 * 24 * HOUR_MS
     const val WINDOW_MS = 15 * 60_000L
     const val HISTORY_MS = 30 * 24 * HOUR_MS
     const val CHALLENGE_LENGTH = 100
 
-    /** Base wait for the mode, doubled for every unlock completed in the last 30 days, capped at 7 days. */
-    fun waitFor(mode: Mode, history: List<Long>, nowMs: Long): Long {
-        val base = if (mode == Mode.STRICT) STRICT_WAIT_MS else LOCK_WAIT_MS
+    /** 1 hour, doubled for every unlock completed in the last 30 days, capped at 7 days. */
+    fun waitFor(history: List<Long>, nowMs: Long): Long {
         val recent = history.count { nowMs - it < HISTORY_MS }
-        var wait = base
+        var wait = BASE_WAIT_MS
         repeat(recent) { wait = (wait * 2).coerceAtMost(MAX_WAIT_MS) }
         return wait
     }
 
-    fun start(state: EmergencyState, mode: Mode, nowMs: Long): EmergencyState =
+    fun start(state: EmergencyState, nowMs: Long): EmergencyState =
         if (state.phase != Phase.IDLE) state
-        else state.copy(phase = Phase.WAITING, remainingMs = waitFor(mode, state.history, nowMs))
+        else state.copy(phase = Phase.WAITING, remainingMs = waitFor(state.history, nowMs))
 
     fun cancel(state: EmergencyState) = state.copy(phase = Phase.IDLE, remainingMs = 0)
 

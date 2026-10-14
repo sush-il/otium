@@ -50,14 +50,6 @@ class PasswordGateActivity : ComponentActivity() {
                         PasswordForm(
                             action = action,
                             onUnlocked = { onUnlocked(target) },
-                            onForgot = {
-                                startActivity(
-                                    Intent(this@PasswordGateActivity, MainActivity::class.java)
-                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                        .putExtra(MainActivity.EXTRA_EMERGENCY, true),
-                                )
-                                finish()
-                            },
                         )
                         TextButton(onClick = ::goHome) { Text("Cancel") }
                     }

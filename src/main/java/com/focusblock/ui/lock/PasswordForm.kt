@@ -78,7 +78,6 @@ fun DigitsField(value: String, onChange: (String) -> Unit, label: String, maxLen
 fun PasswordForm(
     action: String,
     onUnlocked: () -> Unit,
-    onForgot: (() -> Unit)?,
 ) {
     val modeStore = appContainer().modeStore
     val length by modeStore.state.map { it.lockLength ?: NumberChallenges.MIN_LENGTH }.collectAsState(initial = NumberChallenges.MIN_LENGTH)
@@ -118,9 +117,6 @@ fun PasswordForm(
             enabled = input.length == challenge.digits.length,
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Unlock") }
-        if (onForgot != null) {
-            TextButton(onClick = onForgot) { Text("Need out early? Emergency unlock") }
-        }
     }
 }
 
@@ -129,7 +125,7 @@ fun PasswordDialog(action: String, onUnlocked: () -> Unit, onDismiss: () -> Unit
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Lock mode is on") },
-        text = { PasswordForm(action, onUnlocked, onForgot = null) },
+        text = { PasswordForm(action, onUnlocked) },
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
