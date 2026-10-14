@@ -38,19 +38,20 @@ import com.focusblock.ui.common.appContainer
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
-/** Shows a challenge: what the number is, all its digits in groups of five, and where it starts. */
+/** Shows a challenge: what the number is (title + short description side by side) and all its digits in groups of five. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChallengeView(challenge: NumberChallenge) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(challenge.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(challenge.about, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(challenge.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(challenge.about, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+        }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             challenge.digits.chunked(5).forEach { group ->
                 Text(group, fontFamily = FontFamily.Monospace, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
         }
-        Text(challenge.where, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
