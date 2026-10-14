@@ -1,6 +1,5 @@
-# Reference material: copyrighted APK and decompiled output, never committed
-reference/*.apk
-reference/jadx-out/
+# Build-irrelevant material (reference APK, decompiled output, scratch): kept out of git
+misc/
 
 # Android / Gradle
 .gradle/
@@ -17,4 +16,3 @@ captures/
 .DS_Store
 *:sec.endpointdlp
 .zed/
-reference/jadx.log
