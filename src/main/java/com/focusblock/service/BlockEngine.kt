@@ -11,6 +11,8 @@ import android.widget.Toast
 import androidx.core.net.toUri
 import com.focusblock.BuildConfig
 import com.focusblock.data.AppLimitRepository
+import com.focusblock.data.SiteLimitRepository
+import com.focusblock.data.SiteUsageTracker
 import com.focusblock.data.ModeStore
 import com.focusblock.data.SettingsStore
 import com.focusblock.data.ProfileRepository
@@ -23,6 +25,7 @@ import com.focusblock.domain.UsageSource
 import com.focusblock.domain.model.BlockDecision
 import com.focusblock.domain.model.ModeState
 import com.focusblock.domain.model.Profile
+import com.focusblock.domain.model.SiteLimit
 import com.focusblock.domain.model.RuleType
 import com.focusblock.domain.model.TimeLeft
 import com.focusblock.ui.block.BlockActivity
@@ -55,7 +58,9 @@ class BlockEngine(
     private val context: Context,
     profileRepository: ProfileRepository,
     appLimitRepository: AppLimitRepository,
+    siteLimitRepository: SiteLimitRepository,
     private val usage: UsageRepository,
+    private val siteUsage: SiteUsageTracker,
     modeStore: ModeStore,
     settingsStore: SettingsStore,
     private val browsers: BrowserRegistry,
@@ -75,6 +80,12 @@ class BlockEngine(
     @Volatile private var appBlockingEnabled: Boolean = true
     @Volatile private var keywordBlockingEnabled: Boolean = true
     @Volatile private var appLimitProfiles: List<Profile> = emptyList()
+    @Volatile private var siteLimits: List<SiteLimit> = emptyList()
+    @Volatile private var siteLimitHosts: Set<String> = emptySet()
+
+    // Which website host the current browser is showing, if it has site rules
+    @Volatile private var currentSiteHost: String? = null
+    private var currentSitePkg: String? = null
 
     private var current: String? = null
     private var checkJob: Job? = null
@@ -132,6 +143,13 @@ class BlockEngine(
             }
         }
         scope.launch {
+            siteLimitRepository.limits.collect { limits ->
+                siteLimits = limits
+                siteLimitHosts = limits.mapTo(mutableSetOf()) { it.host }
+                current?.let { pkg -> startWatching(pkg) }
+            }
+        }
+        scope.launch {
             combine(
                 settingsStore.blockYoutubeShorts,
                 settingsStore.blockInstagramReels,
@@ -157,19 +175,47 @@ class BlockEngine(
 
     fun urlBarViewId(pkg: String): String? = browsers.urlBarViewId(pkg)
 
-    /** Browser address-bar text changed: move off the page if it's a blocked site/search. */
+    /**
+     * Browser address-bar text changed. Two paths:
+     *  - adult sites and keywords are blocked immediately (no time involved);
+     *  - a host with user site-limits becomes the "current site" so the watch loop can
+     *    apply its stacked rules (schedule / time limits / etc.) and track its time.
+     */
     fun onBrowserText(pkg: String, text: String) {
-        val sites = buildSet {
-            addAll(blockedSites)
-            if (blockAdult) addAll(content.adultDomains)
-        }
-        val keywords = buildSet {
+        val host = SiteMatcher.extractHost(text)?.removePrefix("www.")
+
+        // Immediate blocks: adult domains + keywords
+        val immediateSites = if (blockAdult) content.adultDomains else emptySet()
+        val immediateKeywords = buildSet {
             if (keywordBlockingEnabled) addAll(blockedKeywords)
             if (blockAdult) addAll(content.adultKeywords)
         }
-        if (sites.isEmpty() && keywords.isEmpty()) return
-        val reason = SiteMatcher.blockedReason(text, sites, keywords) ?: return
-        redirectBrowserAway(pkg, reason)
+        if (immediateSites.isNotEmpty() || immediateKeywords.isNotEmpty()) {
+            SiteMatcher.blockedReason(text, immediateSites, immediateKeywords)?.let {
+                setCurrentSite(pkg, null)
+                redirectBrowserAway(pkg, it)
+                return
+            }
+        }
+
+        // User site-limits: find the rule host this page belongs to (incl. subdomains)
+        val ruleHost = host?.let { h -> siteLimitHosts.firstOrNull { h == it || h.endsWith(".$it") } }
+        setCurrentSite(pkg, ruleHost)
+    }
+
+    private fun setCurrentSite(pkg: String, ruleHost: String?) {
+        if (ruleHost == currentSiteHost && pkg == currentSitePkg) return
+        siteUsage.onHost(ruleHost)
+        currentSiteHost = ruleHost
+        currentSitePkg = pkg
+        startWatching(pkg)
+    }
+
+    private fun clearCurrentSite() {
+        if (currentSiteHost == null && currentSitePkg == null) return
+        siteUsage.pause()
+        currentSiteHost = null
+        currentSitePkg = null
     }
 
     /**
@@ -226,6 +272,8 @@ class BlockEngine(
     fun onForeground(pkg: String) {
         // Notification shade or keyboard on top: the app underneath is still in front
         if (pkg == SYSTEM_UI || pkg == currentKeyboardPackage()) return
+        // Leaving the browser ends the site session (stops counting its time)
+        if (pkg != currentSitePkg) clearCurrentSite()
         if (pkg == current) return
         current = pkg
         startWatching(pkg)
@@ -234,6 +282,7 @@ class BlockEngine(
     /** Screen went off: nobody is using the app any more. It's reported again on unlock. */
     fun onScreenOff() {
         grants.clear()
+        clearCurrentSite()
         current = null
         checkJob?.cancel()
         checkJob = null
@@ -262,32 +311,41 @@ class BlockEngine(
             null -> Unit
         }
         while (true) {
-            // Master app-blocking switch: when off, nothing app-based blocks.
-            // Directly-blocked apps are one-app profiles synthesised from their stacked rules.
-            val rules = if (!appBlockingEnabled) emptyList() else profiles + appLimitProfiles
-            // Reading usage stats is a slow system call, keep it off the main thread
+            // A browser showing a limited website is judged on the SITE's rules and time;
+            // everything else is judged on the app's rules.
+            val site = if (pkg in browserPackages) currentSiteHost else null
             val result = withContext(Dispatchers.Default) {
-                // One snapshot per round, so each usage value is read at most once
-                val cached = CachingUsageSource(usage)
                 val now = LocalDateTime.now()
-                val excluded = wholePhoneExcluded()
-                Triple(
-                    BlockEvaluator.evaluate(pkg, now, rules, cached, excluded),
-                    BlockEvaluator.nextRecheck(pkg, now, rules, cached, excluded),
-                    BlockEvaluator.timeLeft(pkg, now, rules, cached, excluded),
-                )
+                if (site != null) {
+                    val rules = siteLimits.filter { it.host == site }.map { it.asProfile() }
+                    Triple(
+                        BlockEvaluator.evaluate(site, now, rules, siteUsage),
+                        BlockEvaluator.nextRecheck(site, now, rules, siteUsage),
+                        BlockEvaluator.timeLeft(site, now, rules, siteUsage),
+                    )
+                } else {
+                    // Master app-blocking switch off → nothing app-based blocks
+                    val rules = if (!appBlockingEnabled) emptyList() else profiles + appLimitProfiles
+                    val cached = CachingUsageSource(usage) // read each usage value at most once
+                    val excluded = wholePhoneExcluded()
+                    Triple(
+                        BlockEvaluator.evaluate(pkg, now, rules, cached, excluded),
+                        BlockEvaluator.nextRecheck(pkg, now, rules, cached, excluded),
+                        BlockEvaluator.timeLeft(pkg, now, rules, cached, excluded),
+                    )
+                }
             }
             val (decision, recheckIn, timeLeft) = result
             if (decision is BlockDecision.Blocked) {
                 _countdown.value = null
-                block(pkg, decision.reason)
+                if (site != null) redirectBrowserAway(pkg, decision.reason) else block(pkg, decision.reason)
                 return
             }
             _countdown.value = timeLeft?.let {
-                Countdown(pkg, it.kind, SystemClock.elapsedRealtime() + it.duration.toMillis())
+                Countdown(site ?: pkg, it.kind, SystemClock.elapsedRealtime() + it.duration.toMillis())
             }
             if (recheckIn == null) return
-            log("recheck $pkg in ${recheckIn.seconds}s")
+            log("recheck ${site ?: pkg} in ${recheckIn.seconds}s")
             // Usage stats can lag a little, so never spin faster than once a second
             delay(recheckIn.toMillis().coerceAtLeast(MIN_RECHECK_MS))
         }

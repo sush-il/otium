@@ -8,13 +8,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [ProfileEntity::class, ProfileAppEntity::class, ScheduleEntity::class, AppLimitEntity::class],
-    version = 5,
+    entities = [ProfileEntity::class, ProfileAppEntity::class, ScheduleEntity::class, AppLimitEntity::class, SiteLimitEntity::class],
+    version = 6,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun profileDao(): ProfileDao
     abstract fun appLimitDao(): AppLimitDao
+    abstract fun siteLimitDao(): SiteLimitDao
 
     companion object {
         // v2 adds the hourly-limit, launch-limit and block-until columns to existing profiles
@@ -54,9 +55,23 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // v6 adds the site_limits table (stackable per-site rules)
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS site_limits (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "host TEXT NOT NULL, type TEXT NOT NULL, " +
+                        "dailyLimitMinutes INTEGER, hourlyLimitMinutes INTEGER, launchLimit INTEGER, " +
+                        "blockUntil INTEGER, daysMask INTEGER, startMinute INTEGER, endMinute INTEGER)",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_site_limits_host ON site_limits (host)")
+            }
+        }
+
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "focusblock.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
     }
 }

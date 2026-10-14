@@ -65,7 +65,7 @@ fun ProfileListScreen(
     val vm: ProfileListViewModel = viewModel(
         factory = viewModelFactory {
             initializer {
-                ProfileListViewModel(container.profileRepository, container.settingsStore, container.modeStore, container.editGuard)
+                ProfileListViewModel(container.profileRepository, container.settingsStore, container.siteLimitRepository, container.modeStore, container.editGuard)
             }
         },
     )

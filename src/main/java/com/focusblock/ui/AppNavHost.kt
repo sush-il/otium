@@ -27,6 +27,7 @@ import com.focusblock.ui.modes.ModesScreen
 import com.focusblock.ui.onboarding.PermissionsScreen
 import com.focusblock.ui.profiles.ProfileEditScreen
 import com.focusblock.ui.apps.AppLimitEditorScreen
+import com.focusblock.ui.sites.SiteLimitEditorScreen
 import com.focusblock.ui.apps.ManageBlockedAppsScreen
 import com.focusblock.ui.profiles.ProfileListScreen
 import com.focusblock.ui.settings.ExcludedAppsScreen
@@ -47,8 +48,10 @@ object Routes {
     const val FEEDS = "feeds"
     const val MANAGE_APPS = "manage_apps"
     const val APP_LIMIT = "app_limit/{pkg}"
+    const val SITE_LIMIT = "site_limit/{host}"
 
     fun appLimit(pkg: String) = "app_limit/$pkg"
+    fun siteLimit(host: String) = "site_limit/$host"
 
     fun profileEdit(id: Long) = "profile/$id"
 }
@@ -144,7 +147,19 @@ fun AppNavHost() {
             ExcludedAppsScreen(onDone = { nav.popBackStack() })
         }
         composable(Routes.WEB_CONTENT) {
-            WebContentScreen(onBack = { nav.popBackStack() })
+            WebContentScreen(
+                onBack = { nav.popBackStack() },
+                onOpenSite = { host -> if (host.isNotBlank()) nav.navigate(Routes.siteLimit(host)) },
+            )
+        }
+        composable(
+            Routes.SITE_LIMIT,
+            arguments = listOf(navArgument("host") { type = NavType.StringType }),
+        ) { entry ->
+            SiteLimitEditorScreen(
+                host = entry.arguments?.getString("host").orEmpty(),
+                onBack = { nav.popBackStack() },
+            )
         }
         composable(Routes.FEEDS) {
             FeedsScreen(onBack = { nav.popBackStack() })

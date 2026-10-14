@@ -2,6 +2,8 @@ package com.focusblock
 
 import android.content.Context
 import com.focusblock.data.AppLimitRepository
+import com.focusblock.data.SiteLimitRepository
+import com.focusblock.data.SiteUsageTracker
 import com.focusblock.data.BrowserRegistry
 import com.focusblock.data.BackupManager
 import com.focusblock.data.ContentRegistry
@@ -28,6 +30,8 @@ class AppContainer(context: Context) {
 
     val profileRepository = ProfileRepository(database.profileDao())
     val appLimitRepository = AppLimitRepository(database.appLimitDao())
+    val siteLimitRepository = SiteLimitRepository(database.siteLimitDao())
+    val siteUsageTracker = SiteUsageTracker()
     val installedAppsRepository = InstalledAppsRepository(context)
     val usageRepository = UsageRepository(context)
     val settingsStore = SettingsStore(context)
@@ -35,7 +39,7 @@ class AppContainer(context: Context) {
     val unlockGrants = UnlockGrants()
     private val browserRegistry = BrowserRegistry(context)
     private val contentRegistry = ContentRegistry(context)
-    val blockEngine = BlockEngine(context, profileRepository, appLimitRepository, usageRepository, modeStore, settingsStore, browserRegistry, contentRegistry, unlockGrants)
+    val blockEngine = BlockEngine(context, profileRepository, appLimitRepository, siteLimitRepository, usageRepository, siteUsageTracker, modeStore, settingsStore, browserRegistry, contentRegistry, unlockGrants)
     val editGuard = EditGuard(modeStore, unlockGrants)
     val backupManager = BackupManager(context, profileRepository, settingsStore)
 
@@ -46,7 +50,10 @@ class AppContainer(context: Context) {
         ModeKeeper(context, modeStore, appScope).start()
         BlockOverlayController(context, blockEngine, settingsStore, appScope).start()
         appScope.launch {
-            settingsStore.dayResetHour.collect { usageRepository.dayResetHour = it }
+            settingsStore.dayResetHour.collect {
+                usageRepository.dayResetHour = it
+                siteUsageTracker.dayResetHour = it
+            }
         }
         // One-time: move old directly-blocked apps into the stackable app-limits table
         appScope.launch {
@@ -54,6 +61,14 @@ class AppContainer(context: Context) {
             if (legacy.isNotEmpty()) {
                 legacy.forEach { appLimitRepository.addAlwaysIfAbsent(it) }
                 settingsStore.setQuickBlockedApps(emptySet())
+            }
+        }
+        // One-time: move old simple blocked-sites into stackable site-limits as ALWAYS rules
+        appScope.launch {
+            val legacy = settingsStore.blockedSites.first()
+            if (legacy.isNotEmpty()) {
+                legacy.forEach { siteLimitRepository.addAlwaysIfAbsent(it) }
+                settingsStore.setBlockedSites(emptySet())
             }
         }
     }

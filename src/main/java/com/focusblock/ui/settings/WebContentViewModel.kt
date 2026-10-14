@@ -3,35 +3,40 @@ package com.focusblock.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.focusblock.data.SettingsStore
+import com.focusblock.data.SiteLimitRepository
+import com.focusblock.domain.model.SiteLimit
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class WebContentViewModel(private val settings: SettingsStore) : ViewModel() {
+class WebContentViewModel(
+    private val settings: SettingsStore,
+    siteLimits: SiteLimitRepository,
+) : ViewModel() {
 
-    val sites: StateFlow<Set<String>?> =
-        settings.blockedSites.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    /** Blocked site hosts with their stacked rules, grouped and sorted. */
+    val sites: StateFlow<Map<String, List<SiteLimit>>> =
+        siteLimits.limits.map { all -> all.groupBy { it.host }.toSortedMap() }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     val keywords: StateFlow<Set<String>?> =
         settings.blockedKeywords.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    // Sites are normalised (lowercase, no scheme/path) so matching is predictable
-    fun addSite(raw: String) = edit {
-        val site = raw.trim().lowercase().substringAfter("://").substringBefore('/').removePrefix("www.")
-        if (site.isNotEmpty()) settings.setBlockedSites(settings.blockedSites.first() + site)
+    /** Normalise a typed site to a bare host (lowercase, no scheme/path/www). */
+    fun normalizeHost(raw: String): String =
+        raw.trim().lowercase().substringAfter("://").substringBefore('/').removePrefix("www.")
+
+    fun addKeyword(raw: String) {
+        viewModelScope.launch {
+            val keyword = raw.trim()
+            if (keyword.isNotEmpty()) settings.setBlockedKeywords(settings.blockedKeywords.first() + keyword)
+        }
     }
 
-    fun removeSite(site: String) = edit { settings.setBlockedSites(settings.blockedSites.first() - site) }
-
-    fun addKeyword(raw: String) = edit {
-        val keyword = raw.trim()
-        if (keyword.isNotEmpty()) settings.setBlockedKeywords(settings.blockedKeywords.first() + keyword)
-    }
-
-    fun removeKeyword(keyword: String) = edit { settings.setBlockedKeywords(settings.blockedKeywords.first() - keyword) }
-
-    private fun edit(block: suspend () -> Unit) {
-        viewModelScope.launch { block() }
+    fun removeKeyword(keyword: String) {
+        viewModelScope.launch { settings.setBlockedKeywords(settings.blockedKeywords.first() - keyword) }
     }
 }
