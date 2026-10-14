@@ -88,6 +88,8 @@ class BlockEngine(
     private var currentSitePkg: String? = null
 
     private var current: String? = null
+    private var pendingPkg: String? = null
+    private var switchJob: Job? = null
     private var checkJob: Job? = null
     private var accessibility: AccessibilityService? = null
     private var launcherPackage: String? = null
@@ -271,14 +273,28 @@ class BlockEngine(
 
     fun onForeground(pkg: String) {
         // Notification shade or keyboard on top: the app underneath is still in front.
-        // Google Play services pops brief windows (common in YouTube/ReVanced); ignoring it
-        // stops the timer flickering off and back on.
+        // Google Play services pops brief windows (common in YouTube/ReVanced); ignore them.
         if (pkg == SYSTEM_UI || pkg == currentKeyboardPackage() || pkg.endsWith(".gms")) return
-        // Leaving the browser ends the site session (stops counting its time)
-        if (pkg != currentSitePkg) clearCurrentSite()
-        if (pkg == current) return
-        current = pkg
-        startWatching(pkg)
+        if (pkg == current) {
+            // Already the current app: cancel any pending switch away from it
+            pendingPkg = null
+            switchJob?.cancel()
+            switchJob = null
+            return
+        }
+        if (pkg == pendingPkg) return
+        // Debounce the switch: a chatty app (e.g. YouTube) flips through transient windows,
+        // so only commit once a new app has been in front continuously for a moment. This
+        // keeps the timer steady while the app is genuinely open.
+        pendingPkg = pkg
+        switchJob?.cancel()
+        switchJob = scope.launch {
+            delay(SWITCH_DEBOUNCE_MS)
+            pendingPkg = null
+            if (pkg != currentSitePkg) clearCurrentSite()
+            current = pkg
+            startWatching(pkg)
+        }
     }
 
     /** Screen went off: nobody is using the app any more. It's reported again on unlock. */
@@ -286,6 +302,9 @@ class BlockEngine(
         grants.clear()
         clearCurrentSite()
         current = null
+        pendingPkg = null
+        switchJob?.cancel()
+        switchJob = null
         checkJob?.cancel()
         checkJob = null
         _countdown.value = null
@@ -493,6 +512,7 @@ class BlockEngine(
             "com.samsung.android.packageinstaller",
         )
         const val DEBOUNCE_MS = 1_000L
+        const val SWITCH_DEBOUNCE_MS = 450L
         const val REDIRECT_DEBOUNCE_MS = 2_500L
         const val MIN_RECHECK_MS = 1_000L
     }
