@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.sushil.focusblock.data.ProfileRepository
 import dev.sushil.focusblock.domain.model.Profile
+import java.time.LocalDateTime
 import dev.sushil.focusblock.ui.common.EditCheck
 import dev.sushil.focusblock.ui.common.EditGuard
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,6 +40,21 @@ class ProfileListViewModel(
                 is EditCheck.Forbidden -> error = check.reason
             }
         }
+    }
+
+    fun pause(profile: Profile, minutes: Long) {
+        viewModelScope.launch {
+            when (val check = guard.checkPause(profile)) {
+                EditCheck.Allowed -> repository.setPausedUntil(profile.id, LocalDateTime.now().plusMinutes(minutes))
+                EditCheck.NeedsPassword -> passwordNeededFor = { pause(profile, minutes) }
+                is EditCheck.Forbidden -> error = check.reason
+            }
+        }
+    }
+
+    // Resuming (clearing the pause) is tightening, so it's always allowed
+    fun resume(profile: Profile) {
+        viewModelScope.launch { repository.setPausedUntil(profile.id, null) }
     }
 
     fun onPasswordAccepted() {

@@ -21,6 +21,9 @@ abstract class ProfileDao {
     @Query("UPDATE profiles SET enabled = :enabled WHERE id = :id")
     abstract suspend fun setEnabled(id: Long, enabled: Boolean)
 
+    @Query("UPDATE profiles SET pausedUntil = :until WHERE id = :id")
+    abstract suspend fun setPausedUntil(id: Long, until: Long?)
+
     @Query("DELETE FROM profiles WHERE id = :id")
     abstract suspend fun delete(id: Long)
 

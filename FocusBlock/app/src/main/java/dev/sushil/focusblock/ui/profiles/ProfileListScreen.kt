@@ -115,6 +115,8 @@ fun ProfileListScreen(
                         profile = profile,
                         onClick = { onOpenProfile(profile.id) },
                         onToggle = { vm.setEnabled(profile, it) },
+                        onPause = { minutes -> vm.pause(profile, minutes) },
+                        onResume = { vm.resume(profile) },
                     )
                 }
             }
@@ -137,18 +139,70 @@ private fun BlockerOffBanner(onClick: () -> Unit) {
 }
 
 @Composable
-private fun ProfileCard(profile: Profile, onClick: () -> Unit, onToggle: (Boolean) -> Unit) {
+private fun ProfileCard(
+    profile: Profile,
+    onClick: () -> Unit,
+    onToggle: (Boolean) -> Unit,
+    onPause: (Long) -> Unit,
+    onResume: () -> Unit,
+) {
+    val paused = profile.pausedUntil?.isAfter(java.time.LocalDateTime.now()) == true
+    var showPause by remember { mutableStateOf(false) }
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(profile.name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "${profile.summary()} · ${profile.packages.size} apps",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(profile.name, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "${profile.summary()} · ${profile.packages.size} apps",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = profile.enabled, onCheckedChange = onToggle)
             }
-            Switch(checked = profile.enabled, onCheckedChange = onToggle)
+            if (profile.enabled) {
+                if (paused) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Paused until ${formatMinute(profile.pausedUntil!!.hour * 60 + profile.pausedUntil.minute)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = onResume) { Text("Resume") }
+                    }
+                } else {
+                    TextButton(onClick = { showPause = true }) { Text("Pause") }
+                }
+            }
         }
     }
+    if (showPause) {
+        PauseDialog(
+            onDismiss = { showPause = false },
+            onPick = {
+                onPause(it)
+                showPause = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun PauseDialog(onDismiss: () -> Unit, onPick: (Long) -> Unit) {
+    val options = listOf(5L to "5 min", 15L to "15 min", 30L to "30 min", 60L to "1 hour", 480L to "8 hours")
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Pause for") },
+        text = {
+            Column {
+                options.forEach { (minutes, label) ->
+                    TextButton(onClick = { onPick(minutes) }, modifier = Modifier.fillMaxWidth()) { Text(label) }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }

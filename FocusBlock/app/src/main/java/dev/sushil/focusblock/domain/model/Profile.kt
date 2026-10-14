@@ -29,7 +29,13 @@ data class Profile(
     val hourlyLimitMinutes: Int? = null,
     val launchLimit: Int? = null,
     val blockUntil: LocalDateTime? = null,
-)
+    /** When set and still in the future, the profile is temporarily off (Normal-mode pause). */
+    val pausedUntil: LocalDateTime? = null,
+) {
+    /** Is this profile actually blocking right now? (On, and not paused.) */
+    fun isEnforcing(now: LocalDateTime): Boolean =
+        enabled && (pausedUntil == null || !now.isBefore(pausedUntil))
+}
 
 /**
  * A weekly time window. [daysMask] bit 0 = Monday ... bit 6 = Sunday.

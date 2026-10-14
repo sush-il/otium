@@ -32,5 +32,20 @@ class EditGuard(private val modeStore: ModeStore, private val grants: UnlockGran
         return EditCheck.Allowed
     }
 
+    /** Pausing is loosening, so it follows the same mode rules as editing. */
+    suspend fun checkPause(profile: Profile): EditCheck {
+        if (!profile.isEnforcing(LocalDateTime.now())) return EditCheck.Allowed
+        val state = modeStore.current()
+        if (state.isStrictActive(LocalDateTime.now(), System.currentTimeMillis())) {
+            return EditCheck.Forbidden("Strict mode is on, so profiles can't be paused.")
+        }
+        if (state.isLock && state.lock.lockProfiles && state.passwordHash != null &&
+            !grants.isGranted(UnlockGrants.Target.PROFILES)
+        ) {
+            return EditCheck.NeedsPassword
+        }
+        return EditCheck.Allowed
+    }
+
     fun grantProfiles() = grants.grant(UnlockGrants.Target.PROFILES)
 }
