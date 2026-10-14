@@ -39,7 +39,7 @@ class ModeStore(context: Context) {
         lockLength = this[LOCK_LENGTH],
         relockAt = this[RELOCK_AT],
         lock = LockOptions(
-            lockApp = this[LOCK_APP] ?: true,
+            lockApp = this[LOCK_APP] ?: false,
             lockSettings = this[LOCK_SETTINGS] ?: true,
             lockProfiles = this[LOCK_PROFILES] ?: true,
         ),
