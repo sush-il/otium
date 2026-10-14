@@ -8,6 +8,12 @@ import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import kotlinx.coroutines.delay
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -82,14 +88,30 @@ class BlockActivity : ComponentActivity() {
 
     @Composable
     private fun BlockScreen(blocked: Blocked, onGoHome: () -> Unit) {
-        Surface(modifier = Modifier.fillMaxSize()) {
+        // Auto-dismiss so it never feels stuck; the button is there if they want it sooner
+        LaunchedEffect(blocked) {
+            delay(4000)
+            onGoHome()
+        }
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(32.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+                verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                blocked.icon?.let { Image(it, contentDescription = null, modifier = Modifier.size(72.dp)) }
-                Text(blocked.label, style = MaterialTheme.typography.headlineMedium)
+                Box(
+                    Modifier.size(96.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    blocked.icon?.let { Image(it, contentDescription = null, modifier = Modifier.size(56.dp)) }
+                        ?: Text("🚫", style = MaterialTheme.typography.displaySmall)
+                }
+                Text("Blocked", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    blocked.label,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Text(blocked.reason, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
                 Button(onClick = onGoHome) { Text("Go home") }
             }
