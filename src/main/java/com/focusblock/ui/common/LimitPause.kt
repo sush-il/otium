@@ -5,7 +5,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.materialIcon
 import androidx.compose.material.icons.materialPath
-import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -78,14 +78,14 @@ fun PauseDialogs(pause: LimitPause) {
     }
 }
 
-/** Filled open lock = paused; outlined closed lock = limits active. */
+/** Shows the current state: coloured closed lock = limits enforced; greyed open lock = paused. */
 @Composable
 fun PauseButton(paused: Boolean, onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
         Icon(
-            imageVector = if (paused) LockOpenFilled else Icons.Outlined.Lock,
+            imageVector = if (paused) LockOpenFilled else Icons.Filled.Lock,
             contentDescription = if (paused) "Resume limits" else "Pause limits",
-            tint = if (paused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = if (paused) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
         )
     }
 }
