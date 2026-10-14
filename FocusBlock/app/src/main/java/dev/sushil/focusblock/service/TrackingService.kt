@@ -11,6 +11,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
@@ -22,12 +23,19 @@ import androidx.core.content.ContextCompat
 import dev.sushil.focusblock.BuildConfig
 import dev.sushil.focusblock.FocusBlockApp
 import dev.sushil.focusblock.R
+import dev.sushil.focusblock.data.SettingsStore
+import dev.sushil.focusblock.data.TimerDisplay
+import dev.sushil.focusblock.domain.model.TimeLeft
 import dev.sushil.focusblock.ui.MainActivity
+import dev.sushil.focusblock.util.Permissions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -44,12 +52,18 @@ class TrackingService : Service() {
     private var pollJob: Job? = null
     private lateinit var engine: BlockEngine
     private lateinit var poller: ForegroundPoller
+    private lateinit var settings: SettingsStore
+    private lateinit var overlay: TimerOverlay
+    private lateinit var alerts: LowTimeAlerts
 
     // Polling only makes sense while someone can see the screen
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                Intent.ACTION_SCREEN_OFF -> stopPolling()
+                Intent.ACTION_SCREEN_OFF -> {
+                    stopPolling()
+                    engine.onScreenOff()
+                }
                 Intent.ACTION_USER_PRESENT -> startPolling()
                 // No lock screen set up: there's no USER_PRESENT, so start on screen on
                 Intent.ACTION_SCREEN_ON -> if (!isKeyguardLocked()) startPolling()
@@ -59,13 +73,18 @@ class TrackingService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        engine = (application as FocusBlockApp).container.blockEngine
+        val container = (application as FocusBlockApp).container
+        engine = container.blockEngine
+        settings = container.settingsStore
         poller = ForegroundPoller(getSystemService(UsageStatsManager::class.java))
+        overlay = TimerOverlay(this)
+        alerts = LowTimeAlerts(this)
+        createStatusChannel()
 
         ServiceCompat.startForeground(
             this,
             NOTIFICATION_ID,
-            buildNotification(),
+            buildNotification(null),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             } else {
@@ -81,6 +100,12 @@ class TrackingService : Service() {
         ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
         if (getSystemService(PowerManager::class.java).isInteractive && !isKeyguardLocked()) startPolling()
+
+        scope.launch {
+            combine(engine.countdown, settings.timerDisplay, settings.lowTimeAlerts, ::Triple)
+                // A new value cancels the previous timer/alert loop and starts fresh
+                .collectLatest { (countdown, display, alertsOn) -> showCountdown(countdown, display, alertsOn) }
+        }
         log("tracking service started")
     }
 
@@ -92,6 +117,7 @@ class TrackingService : Service() {
     override fun onDestroy() {
         unregisterReceiver(screenReceiver)
         scope.cancel()
+        overlay.hide()
         log("tracking service stopped")
         super.onDestroy()
     }
@@ -114,24 +140,82 @@ class TrackingService : Service() {
         pollJob = null
     }
 
+    /** Shows the open app's time left the way the user chose, and fires low-time alerts. */
+    private suspend fun showCountdown(countdown: Countdown?, display: TimerDisplay, alertsOn: Boolean) {
+        if (countdown == null) {
+            overlay.hide()
+            updateNotification(null)
+            return
+        }
+        val label = appLabel(countdown.pkg)
+        // Floating needs "Display over other apps"; without it, fall back to the notification
+        val effective = if (display == TimerDisplay.FLOATING && !Permissions.canDrawOverlays(this)) {
+            TimerDisplay.NOTIFICATION
+        } else {
+            display
+        }
+        updateNotification(if (effective == TimerDisplay.NOTIFICATION) countdown to label else null)
+        if (effective != TimerDisplay.FLOATING) overlay.hide()
+
+        coroutineScope {
+            if (alertsOn) launch {
+                for (minutes in alerts.pendingThresholds(countdown.pkg, countdown.remainingMs())) {
+                    delay(countdown.remainingMs() - minutes * 60_000L)
+                    alerts.send(countdown.pkg, label, minutes)
+                }
+            }
+            if (effective == TimerDisplay.FLOATING) launch {
+                while (true) {
+                    overlay.update(label, countdown.kind, countdown.remainingMs())
+                    delay(1_000)
+                }
+            }
+        }
+    }
+
+    private fun appLabel(pkg: String): String = try {
+        packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
+    } catch (_: PackageManager.NameNotFoundException) {
+        pkg
+    }
+
     private fun isKeyguardLocked() = getSystemService(KeyguardManager::class.java).isKeyguardLocked
 
-    private fun buildNotification(): Notification {
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(
+    private fun createStatusChannel() {
+        getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(CHANNEL_ID, getString(R.string.channel_status), NotificationManager.IMPORTANCE_LOW).apply {
                 setShowBadge(false)
             },
         )
+    }
+
+    private fun updateNotification(countdown: Pair<Countdown, String>?) {
+        // Re-posting with the same id replaces the permanent notification in place
+        if (Permissions.hasNotificationPermission(this)) {
+            getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification(countdown))
+        }
+    }
+
+    /** Plain "active" notification, or a countdown the system ticks by itself (no updates needed). */
+    private fun buildNotification(countdown: Pair<Countdown, String>?): Notification {
         val openApp = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
         )
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(getString(R.string.notification_active))
             .setContentIntent(openApp)
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+        if (countdown == null) return builder.setContentTitle(getString(R.string.notification_active)).build()
+
+        val (c, label) = countdown
+        return builder
+            .setContentTitle(if (c.kind == TimeLeft.Kind.LIMIT) "$label: time left today" else "$label: blocked in")
+            .setUsesChronometer(true)
+            .setChronometerCountDown(true)
+            .setShowWhen(true)
+            .setWhen(System.currentTimeMillis() + c.remainingMs())
             .build()
     }
 

@@ -3,6 +3,7 @@ package dev.sushil.focusblock
 import android.content.Context
 import dev.sushil.focusblock.data.InstalledAppsRepository
 import dev.sushil.focusblock.data.ProfileRepository
+import dev.sushil.focusblock.data.SettingsStore
 import dev.sushil.focusblock.data.UsageRepository
 import dev.sushil.focusblock.data.db.AppDatabase
 import dev.sushil.focusblock.service.BlockEngine
@@ -14,5 +15,6 @@ class AppContainer(context: Context) {
     val profileRepository = ProfileRepository(database.profileDao())
     val installedAppsRepository = InstalledAppsRepository(context)
     val usageRepository = UsageRepository(context)
+    val settingsStore = SettingsStore(context)
     val blockEngine = BlockEngine(context, profileRepository, usageRepository)
 }

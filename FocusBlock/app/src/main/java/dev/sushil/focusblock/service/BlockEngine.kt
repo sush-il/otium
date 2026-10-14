@@ -13,12 +13,16 @@ import dev.sushil.focusblock.data.UsageRepository
 import dev.sushil.focusblock.domain.BlockEvaluator
 import dev.sushil.focusblock.domain.model.BlockDecision
 import dev.sushil.focusblock.domain.model.Profile
+import dev.sushil.focusblock.domain.model.TimeLeft
 import dev.sushil.focusblock.ui.block.BlockActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
@@ -46,6 +50,11 @@ class BlockEngine(
     private var checkJob: Job? = null
     private var accessibility: AccessibilityService? = null
     private var launcherPackage: String? = null
+
+    private val _countdown = MutableStateFlow<Countdown?>(null)
+
+    /** The open app's time left, or null when nothing is counting down. Drives the timer and alerts. */
+    val countdown: StateFlow<Countdown?> = _countdown.asStateFlow()
 
     private var lastBlockedPackage: String? = null
     private var lastBlockedAt = 0L
@@ -77,9 +86,18 @@ class BlockEngine(
         startWatching(pkg)
     }
 
+    /** Screen went off: nobody is using the app any more. It's reported again on unlock. */
+    fun onScreenOff() {
+        current = null
+        checkJob?.cancel()
+        checkJob = null
+        _countdown.value = null
+    }
+
     private fun startWatching(pkg: String) {
         checkJob?.cancel()
         checkJob = null
+        _countdown.value = null
         if (pkg == context.packageName || pkg == launcherPackage()) return
         checkJob = scope.launch { watch(pkg) }
     }
@@ -87,17 +105,27 @@ class BlockEngine(
     /** Runs while [pkg] stays in front; cancelled as soon as another app comes up. */
     private suspend fun watch(pkg: String) {
         while (true) {
-            val usedToday = { p: String -> usage.usedTodayMs(p) }
             val rules = profiles
             // Reading usage stats is a slow system call, keep it off the main thread
-            val (decision, recheckIn) = withContext(Dispatchers.Default) {
+            val result = withContext(Dispatchers.Default) {
+                // Read usage once per round, not once per profile
+                val cache = HashMap<String, Long?>()
+                val usedToday = { p: String -> cache.getOrPut(p) { usage.usedTodayMs(p) } }
                 val now = LocalDateTime.now()
-                BlockEvaluator.evaluate(pkg, now, rules, usedToday) to
-                    BlockEvaluator.nextRecheck(pkg, now, rules, usedToday)
+                Triple(
+                    BlockEvaluator.evaluate(pkg, now, rules, usedToday),
+                    BlockEvaluator.nextRecheck(pkg, now, rules, usedToday),
+                    BlockEvaluator.timeLeft(pkg, now, rules, usedTodayMs = usedToday),
+                )
             }
+            val (decision, recheckIn, timeLeft) = result
             if (decision is BlockDecision.Blocked) {
+                _countdown.value = null
                 block(pkg, decision.reason)
                 return
+            }
+            _countdown.value = timeLeft?.let {
+                Countdown(pkg, it.kind, SystemClock.elapsedRealtime() + it.duration.toMillis())
             }
             if (recheckIn == null) return
             log("recheck $pkg in ${recheckIn.seconds}s")
@@ -155,4 +183,12 @@ class BlockEngine(
         const val DEBOUNCE_MS = 1_000L
         const val MIN_RECHECK_MS = 1_000L
     }
+}
+
+/**
+ * [endsAt] is on the [SystemClock.elapsedRealtime] clock, so changing the phone's
+ * date/time doesn't move it.
+ */
+data class Countdown(val pkg: String, val kind: TimeLeft.Kind, val endsAt: Long) {
+    fun remainingMs(): Long = (endsAt - SystemClock.elapsedRealtime()).coerceAtLeast(0)
 }

@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,6 +46,7 @@ fun ProfileListScreen(
     onOpenProfile: (Long) -> Unit,
     onNewProfile: () -> Unit,
     onOpenSetup: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     val container = appContainer()
     val vm: ProfileListViewModel = viewModel(
@@ -60,7 +62,12 @@ fun ProfileListScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Focus Block") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Focus Block") },
+                actions = { TextButton(onClick = onOpenSettings) { Text("Settings") } },
+            )
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = onNewProfile) { Text("New profile") }
         },

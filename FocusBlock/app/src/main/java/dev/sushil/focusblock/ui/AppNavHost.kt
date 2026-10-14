@@ -11,12 +11,14 @@ import androidx.navigation.navArgument
 import dev.sushil.focusblock.ui.onboarding.PermissionsScreen
 import dev.sushil.focusblock.ui.profiles.ProfileEditScreen
 import dev.sushil.focusblock.ui.profiles.ProfileListScreen
+import dev.sushil.focusblock.ui.settings.SettingsScreen
 import dev.sushil.focusblock.util.Permissions
 
 object Routes {
     const val PROFILES = "profiles"
     const val PERMISSIONS = "permissions"
     const val PROFILE_EDIT = "profile/{id}"
+    const val SETTINGS = "settings"
 
     fun profileEdit(id: Long) = "profile/$id"
 }
@@ -34,6 +36,13 @@ fun AppNavHost() {
             ProfileListScreen(
                 onOpenProfile = { nav.navigate(Routes.profileEdit(it)) },
                 onNewProfile = { nav.navigate(Routes.profileEdit(0)) },
+                onOpenSetup = { nav.navigate(Routes.PERMISSIONS) },
+                onOpenSettings = { nav.navigate(Routes.SETTINGS) },
+            )
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onBack = { nav.popBackStack() },
                 onOpenSetup = { nav.navigate(Routes.PERMISSIONS) },
             )
         }

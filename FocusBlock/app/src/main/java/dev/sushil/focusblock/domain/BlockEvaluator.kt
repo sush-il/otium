@@ -4,6 +4,7 @@ import dev.sushil.focusblock.domain.model.BlockDecision
 import dev.sushil.focusblock.domain.model.Profile
 import dev.sushil.focusblock.domain.model.RuleType
 import dev.sushil.focusblock.domain.model.Schedule
+import dev.sushil.focusblock.domain.model.TimeLeft
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -72,6 +73,34 @@ object BlockEvaluator {
             }
         }
         return candidates.minOrNull()
+    }
+
+    /**
+     * What to show on the timer while [pkg] is open: daily-limit time left, or a
+     * schedule start within [scheduleHorizon]. Null means there's nothing to count down.
+     */
+    fun timeLeft(
+        pkg: String,
+        now: LocalDateTime,
+        profiles: List<Profile>,
+        scheduleHorizon: Duration = Duration.ofHours(1),
+        usedTodayMs: (String) -> Long?,
+    ): TimeLeft? {
+        val candidates = profiles.filter { it.enabled && pkg in it.packages }.mapNotNull { profile ->
+            when (profile.type) {
+                RuleType.ALWAYS -> null
+                RuleType.SCHEDULE -> profile.schedules.mapNotNull { it.nextStart(now) }.minOrNull()
+                    ?.let { Duration.between(now, it) }
+                    ?.takeIf { it <= scheduleHorizon }
+                    ?.let { TimeLeft(TimeLeft.Kind.SCHEDULE_START, it) }
+                RuleType.DAILY_LIMIT -> {
+                    val limitMs = (profile.dailyLimitMinutes ?: return@mapNotNull null) * 60_000L
+                    val used = usedTodayMs(pkg) ?: return@mapNotNull null
+                    TimeLeft(TimeLeft.Kind.LIMIT, Duration.ofMillis((limitMs - used).coerceAtLeast(0)))
+                }
+            }
+        }
+        return candidates.minByOrNull { it.duration }
     }
 }
 

@@ -4,6 +4,7 @@ import dev.sushil.focusblock.domain.model.BlockDecision
 import dev.sushil.focusblock.domain.model.Profile
 import dev.sushil.focusblock.domain.model.RuleType
 import dev.sushil.focusblock.domain.model.Schedule
+import dev.sushil.focusblock.domain.model.TimeLeft
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -92,5 +93,32 @@ class BlockEvaluatorTest {
     @Test fun `no recheck for always or unrelated apps`() {
         assertNull(BlockEvaluator.nextRecheck(app, at(12, 10), listOf(profile(RuleType.ALWAYS))) { 0 })
         assertNull(BlockEvaluator.nextRecheck("other.app", at(12, 10), listOf(profile(RuleType.DAILY_LIMIT, limit = 5))) { 0 })
+    }
+
+    @Test fun `time left shows the daily limit remaining`() {
+        val p = profile(RuleType.DAILY_LIMIT, limit = 30)
+        val left = BlockEvaluator.timeLeft(app, at(12, 10), listOf(p)) { 25 * 60_000L }
+        assertEquals(TimeLeft(TimeLeft.Kind.LIMIT, Duration.ofMinutes(5)), left)
+    }
+
+    @Test fun `time left shows a schedule starting within the hour only`() {
+        val p = profile(RuleType.SCHEDULE, schedules = arrayOf(Schedule(weekdays, 9 * 60, 17 * 60)))
+        assertEquals(
+            TimeLeft(TimeLeft.Kind.SCHEDULE_START, Duration.ofMinutes(20)),
+            BlockEvaluator.timeLeft(app, at(12, 8, 40), listOf(p)) { 0 },
+        )
+        assertNull(BlockEvaluator.timeLeft(app, at(12, 7), listOf(p)) { 0 })
+    }
+
+    @Test fun `time left picks the soonest of several profiles`() {
+        val limit = profile(RuleType.DAILY_LIMIT, limit = 30)
+        val schedule = profile(RuleType.SCHEDULE, schedules = arrayOf(Schedule(weekdays, 9 * 60, 17 * 60)))
+        val left = BlockEvaluator.timeLeft(app, at(12, 8, 50), listOf(limit, schedule)) { 0 }
+        assertEquals(TimeLeft.Kind.SCHEDULE_START, left?.kind)
+    }
+
+    @Test fun `no time left for always-blocked or unlimited apps`() {
+        assertNull(BlockEvaluator.timeLeft(app, at(12, 10), listOf(profile(RuleType.ALWAYS))) { 0 })
+        assertNull(BlockEvaluator.timeLeft("other.app", at(12, 10), listOf(profile(RuleType.DAILY_LIMIT, limit = 5))) { 0 })
     }
 }
