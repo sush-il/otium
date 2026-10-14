@@ -50,6 +50,27 @@
             android:noHistory="true"
             android:taskAffinity="" />
 
+        <activity
+            android:name=".ui.lock.PasswordGateActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:noHistory="true"
+            android:taskAffinity="" />
+
+        <!-- Uninstall protection for Strict mode -->
+        <receiver
+            android:name=".admin.FocusAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".service.BlockerAccessibilityService"
             android:exported="true"

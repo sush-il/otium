@@ -25,7 +25,9 @@ import dev.sushil.focusblock.FocusBlockApp
 import dev.sushil.focusblock.R
 import dev.sushil.focusblock.data.SettingsStore
 import dev.sushil.focusblock.data.TimerDisplay
+import dev.sushil.focusblock.domain.model.EmergencyState
 import dev.sushil.focusblock.domain.model.TimeLeft
+import dev.sushil.focusblock.ui.modes.formatHours
 import dev.sushil.focusblock.ui.MainActivity
 import dev.sushil.focusblock.util.Permissions
 import kotlinx.coroutines.CoroutineScope
@@ -36,6 +38,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -55,6 +59,10 @@ class TrackingService : Service() {
     private lateinit var settings: SettingsStore
     private lateinit var overlay: TimerOverlay
     private lateinit var alerts: LowTimeAlerts
+
+    // Last values shown in the permanent notification, so either can update it alone
+    private var shownCountdown: Pair<Countdown, String>? = null
+    private var emergencyText: String? = null
 
     // Polling only makes sense while someone can see the screen
     private val screenReceiver = object : BroadcastReceiver() {
@@ -105,6 +113,16 @@ class TrackingService : Service() {
             combine(engine.countdown, settings.timerDisplay, settings.lowTimeAlerts, ::Triple)
                 // A new value cancels the previous timer/alert loop and starts fresh
                 .collectLatest { (countdown, display, alertsOn) -> showCountdown(countdown, display, alertsOn) }
+        }
+        scope.launch {
+            container.modeStore.state.map { it.emergency }.distinctUntilChanged().collect { e ->
+                emergencyText = when (e.phase) {
+                    EmergencyState.Phase.IDLE -> null
+                    EmergencyState.Phase.WAITING -> "Emergency unlock in ${formatHours(e.remainingMs)}"
+                    EmergencyState.Phase.WINDOW -> "Emergency unlock ready: open Focus Block"
+                }
+                updateNotification(shownCountdown)
+            }
         }
         log("tracking service started")
     }
@@ -190,6 +208,7 @@ class TrackingService : Service() {
     }
 
     private fun updateNotification(countdown: Pair<Countdown, String>?) {
+        shownCountdown = countdown
         // Re-posting with the same id replaces the permanent notification in place
         if (Permissions.hasNotificationPermission(this)) {
             getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification(countdown))
@@ -207,6 +226,7 @@ class TrackingService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setSubText(emergencyText)
         if (countdown == null) return builder.setContentTitle(getString(R.string.notification_active)).build()
 
         val (c, label) = countdown

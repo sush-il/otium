@@ -8,6 +8,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import dev.sushil.focusblock.ui.modes.EmergencyScreen
+import dev.sushil.focusblock.ui.modes.ModesScreen
 import dev.sushil.focusblock.ui.onboarding.PermissionsScreen
 import dev.sushil.focusblock.ui.profiles.ProfileEditScreen
 import dev.sushil.focusblock.ui.profiles.ProfileListScreen
@@ -19,6 +21,8 @@ object Routes {
     const val PERMISSIONS = "permissions"
     const val PROFILE_EDIT = "profile/{id}"
     const val SETTINGS = "settings"
+    const val MODES = "modes"
+    const val EMERGENCY = "emergency"
 
     fun profileEdit(id: Long) = "profile/$id"
 }
@@ -38,7 +42,14 @@ fun AppNavHost() {
                 onNewProfile = { nav.navigate(Routes.profileEdit(0)) },
                 onOpenSetup = { nav.navigate(Routes.PERMISSIONS) },
                 onOpenSettings = { nav.navigate(Routes.SETTINGS) },
+                onOpenModes = { nav.navigate(Routes.MODES) },
             )
+        }
+        composable(Routes.MODES) {
+            ModesScreen(onBack = { nav.popBackStack() }, onOpenEmergency = { nav.navigate(Routes.EMERGENCY) })
+        }
+        composable(Routes.EMERGENCY) {
+            EmergencyScreen(onClose = { nav.popBackStack() })
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(

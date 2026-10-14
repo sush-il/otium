@@ -7,14 +7,18 @@ import android.content.pm.PackageManager
 import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
+import androidx.core.net.toUri
 import dev.sushil.focusblock.BuildConfig
+import dev.sushil.focusblock.data.ModeStore
 import dev.sushil.focusblock.data.ProfileRepository
 import dev.sushil.focusblock.data.UsageRepository
 import dev.sushil.focusblock.domain.BlockEvaluator
 import dev.sushil.focusblock.domain.model.BlockDecision
+import dev.sushil.focusblock.domain.model.ModeState
 import dev.sushil.focusblock.domain.model.Profile
 import dev.sushil.focusblock.domain.model.TimeLeft
 import dev.sushil.focusblock.ui.block.BlockActivity
+import dev.sushil.focusblock.ui.lock.PasswordGateActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -25,7 +29,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * The one place that knows which app is in front and whether to block it.
@@ -40,16 +47,21 @@ class BlockEngine(
     private val context: Context,
     profileRepository: ProfileRepository,
     private val usage: UsageRepository,
+    modeStore: ModeStore,
+    private val grants: UnlockGrants,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     // In-memory copy of the rules so a foreground change never waits on the database
     @Volatile private var profiles: List<Profile> = emptyList()
+    @Volatile private var modeState = ModeState()
 
     private var current: String? = null
     private var checkJob: Job? = null
     private var accessibility: AccessibilityService? = null
     private var launcherPackage: String? = null
+    private var settingsPackage: String? = null
+    private var installerPackages: Set<String>? = null
 
     private val _countdown = MutableStateFlow<Countdown?>(null)
 
@@ -68,6 +80,12 @@ class BlockEngine(
                 current?.let { pkg -> startWatching(pkg) }
             }
         }
+        scope.launch {
+            modeStore.state.collect {
+                modeState = it
+                current?.let { pkg -> startWatching(pkg) }
+            }
+        }
     }
 
     fun attachAccessibility(service: AccessibilityService) {
@@ -76,6 +94,25 @@ class BlockEngine(
 
     fun detachAccessibility(service: AccessibilityService) {
         if (accessibility === service) accessibility = null
+    }
+
+    /**
+     * Window details only accessibility events have (the class name). Used by Strict mode
+     * to close the Recents screen and the power-off menu.
+     */
+    fun onWindowEvent(pkg: String, className: String?) {
+        val cls = className ?: return
+        val state = modeState
+        if (!state.isStrictActive(LocalDateTime.now(), System.currentTimeMillis())) return
+        val service = accessibility ?: return
+        if (state.strict.blockRecents && cls.contains("Recents", ignoreCase = true)) {
+            log("closing recents ($pkg/$cls)")
+            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+        }
+        if (state.strict.blockPowerMenu && cls.contains("GlobalActions", ignoreCase = true)) {
+            log("closing power menu ($pkg/$cls)")
+            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+        }
     }
 
     fun onForeground(pkg: String) {
@@ -88,6 +125,7 @@ class BlockEngine(
 
     /** Screen went off: nobody is using the app any more. It's reported again on unlock. */
     fun onScreenOff() {
+        grants.clear()
         current = null
         checkJob?.cancel()
         checkJob = null
@@ -104,6 +142,17 @@ class BlockEngine(
 
     /** Runs while [pkg] stays in front; cancelled as soon as another app comes up. */
     private suspend fun watch(pkg: String) {
+        when (val guard = modeGuard(pkg)) {
+            is Guard.Block -> {
+                block(pkg, guard.reason)
+                return
+            }
+            is Guard.Password -> {
+                showPasswordGate(pkg, guard.target)
+                return
+            }
+            null -> Unit
+        }
         while (true) {
             val rules = profiles
             // Reading usage stats is a slow system call, keep it off the main thread
@@ -144,13 +193,9 @@ class BlockEngine(
         current = null
 
         log("blocking $pkg: $reason (accessibility=${accessibility != null})")
-        val service = accessibility
-        if (service != null) {
-            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
-        } else {
-            // Polling path: allowed from the background because we hold "Display over other apps"
-            context.startActivity(homeIntent())
-        }
+        // Without accessibility (polling path), starting activities from the background is
+        // allowed because we hold "Display over other apps"
+        goHome()
         context.startActivity(
             Intent(context, BlockActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -158,6 +203,75 @@ class BlockEngine(
                 .putExtra(BlockActivity.EXTRA_REASON, reason),
         )
     }
+
+    private sealed interface Guard {
+        data class Block(val reason: String) : Guard
+        data class Password(val target: UnlockGrants.Target) : Guard
+    }
+
+    /** Lock/Strict mode protection of Settings, uninstalling and the Play Store. */
+    private fun modeGuard(pkg: String): Guard? {
+        val state = modeState
+        val isSettings = pkg == settingsPackage()
+        val isInstaller = pkg in installerPackages()
+        if (state.isStrictActive(LocalDateTime.now(), System.currentTimeMillis())) {
+            val until = state.strictUntil?.let { "until " + formatEndTime(it) } ?: "while its schedule runs"
+            if (isInstaller) return Guard.Block("Uninstalling is blocked by Strict mode $until")
+            if (isSettings && state.strict.blockSettings) return Guard.Block("Settings is blocked by Strict mode $until")
+            if (pkg == PLAY_STORE && state.strict.blockPlayStore) return Guard.Block("Play Store is blocked by Strict mode $until")
+        }
+        if (state.isLock && state.passwordHash != null) {
+            if (isSettings && state.lock.lockSettings && !grants.isGranted(UnlockGrants.Target.SETTINGS)) {
+                return Guard.Password(UnlockGrants.Target.SETTINGS)
+            }
+            if (isInstaller && !grants.isGranted(UnlockGrants.Target.INSTALLER)) {
+                return Guard.Password(UnlockGrants.Target.INSTALLER)
+            }
+        }
+        return null
+    }
+
+    private fun showPasswordGate(pkg: String, target: UnlockGrants.Target) {
+        current = null
+        log("password needed for $pkg ($target)")
+        goHome()
+        context.startActivity(
+            Intent(context, PasswordGateActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                .putExtra(PasswordGateActivity.EXTRA_TARGET, target.name),
+        )
+    }
+
+    private fun goHome() {
+        val service = accessibility
+        if (service != null) {
+            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+        } else {
+            context.startActivity(homeIntent())
+        }
+    }
+
+    private fun formatEndTime(epochMs: Long): String =
+        DateTimeFormatter.ofPattern("EEE d MMM, HH:mm")
+            .format(Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()))
+
+    private fun settingsPackage(): String? =
+        settingsPackage ?: context.packageManager
+            .resolveActivity(Intent(Settings.ACTION_SETTINGS), PackageManager.MATCH_DEFAULT_ONLY)
+            ?.activityInfo?.packageName
+            .also { settingsPackage = it }
+
+    /** Whatever handles uninstall/install on this phone, plus the usual names. */
+    private fun installerPackages(): Set<String> = installerPackages ?: buildSet {
+        addAll(KNOWN_INSTALLERS)
+        val pm = context.packageManager
+        listOf(
+            @Suppress("DEPRECATION") Intent(Intent.ACTION_UNINSTALL_PACKAGE, "package:x".toUri()),
+            Intent(Intent.ACTION_DELETE, "package:x".toUri()),
+        ).forEach { intent ->
+            pm.queryIntentActivities(intent, 0).forEach { add(it.activityInfo.packageName) }
+        }
+    }.also { installerPackages = it }
 
     private fun currentKeyboardPackage(): String? =
         Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
@@ -180,6 +294,12 @@ class BlockEngine(
     private companion object {
         const val TAG = "FocusBlock"
         const val SYSTEM_UI = "com.android.systemui"
+        const val PLAY_STORE = "com.android.vending"
+        val KNOWN_INSTALLERS = setOf(
+            "com.android.packageinstaller",
+            "com.google.android.packageinstaller",
+            "com.samsung.android.packageinstaller",
+        )
         const val DEBOUNCE_MS = 1_000L
         const val MIN_RECHECK_MS = 1_000L
     }

@@ -109,7 +109,7 @@ private fun Schedule.hasDay(dayIndex: Int) = daysMask and (1 shl dayIndex) != 0
 /** Monday = 0 ... Sunday = 6, matching the bits of [Schedule.daysMask]. */
 private fun LocalDateTime.dayIndex() = dayOfWeek.value - 1
 
-internal fun Schedule.isActive(now: LocalDateTime): Boolean {
+fun Schedule.isActive(now: LocalDateTime): Boolean {
     val minute = now.hour * 60 + now.minute
     val today = now.dayIndex()
     val yesterday = (today + 6) % 7

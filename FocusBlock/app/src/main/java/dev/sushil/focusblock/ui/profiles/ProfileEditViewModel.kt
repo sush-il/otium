@@ -12,6 +12,8 @@ import dev.sushil.focusblock.data.ProfileRepository
 import dev.sushil.focusblock.domain.model.Profile
 import dev.sushil.focusblock.domain.model.RuleType
 import dev.sushil.focusblock.domain.model.Schedule
+import dev.sushil.focusblock.ui.common.EditCheck
+import dev.sushil.focusblock.ui.common.EditGuard
 import kotlinx.coroutines.launch
 
 /** Holds the form while creating ([profileId] = 0) or editing a profile. */
@@ -19,6 +21,7 @@ class ProfileEditViewModel(
     private val profileId: Long,
     private val profiles: ProfileRepository,
     private val installedApps: InstalledAppsRepository,
+    private val guard: EditGuard,
 ) : ViewModel() {
 
     val isNew = profileId == 0L
@@ -35,10 +38,20 @@ class ProfileEditViewModel(
         private set
 
     private var enabled = true
+    private var original: Profile? = null
+
+    /** Shown under the Save button when the current mode refuses a change. */
+    var error by mutableStateOf<String?>(null)
+        private set
+
+    /** Non-null while the Lock-mode password dialog is open; runs after a correct password. */
+    var passwordNeededFor by mutableStateOf<(() -> Unit)?>(null)
+        private set
 
     init {
         viewModelScope.launch {
             if (!isNew) profiles.get(profileId)?.let {
+                original = it
                 name = it.name
                 type = it.type
                 selected = it.packages
@@ -64,27 +77,51 @@ class ProfileEditViewModel(
 
     fun save(onSaved: () -> Unit) {
         if (!canSave) return
-        viewModelScope.launch {
-            profiles.save(
-                Profile(
-                    id = profileId,
-                    name = name.trim(),
-                    enabled = enabled,
-                    type = type,
-                    packages = selected,
-                    // Only keep the settings that belong to the chosen rule type
-                    dailyLimitMinutes = dailyLimitMinutes.takeIf { type == RuleType.DAILY_LIMIT },
-                    schedules = if (type == RuleType.SCHEDULE) listOf(schedule) else emptyList(),
-                ),
-            )
+        val updated = buildProfile()
+        guarded(old = original, new = updated, retry = { save(onSaved) }) {
+            profiles.save(updated)
             onSaved()
         }
     }
 
     fun delete(onDeleted: () -> Unit) {
-        viewModelScope.launch {
+        guarded(old = original, new = null, retry = { delete(onDeleted) }) {
             profiles.delete(profileId)
             onDeleted()
         }
     }
+
+    fun onPasswordAccepted() {
+        guard.grantProfiles()
+        val retry = passwordNeededFor
+        passwordNeededFor = null
+        retry?.invoke()
+    }
+
+    fun onPasswordDismissed() {
+        passwordNeededFor = null
+    }
+
+    /** Runs [action] only if the current mode allows changing [old] into [new]. */
+    private fun guarded(old: Profile?, new: Profile?, retry: () -> Unit, action: suspend () -> Unit) {
+        viewModelScope.launch {
+            error = null
+            when (val check = guard.check(old, new)) {
+                EditCheck.Allowed -> action()
+                EditCheck.NeedsPassword -> passwordNeededFor = retry
+                is EditCheck.Forbidden -> error = check.reason
+            }
+        }
+    }
+
+    private fun buildProfile() = Profile(
+        id = profileId,
+        name = name.trim(),
+        enabled = enabled,
+        type = type,
+        packages = selected,
+        // Only keep the settings that belong to the chosen rule type
+        dailyLimitMinutes = dailyLimitMinutes.takeIf { type == RuleType.DAILY_LIMIT },
+        schedules = if (type == RuleType.SCHEDULE) listOf(schedule) else emptyList(),
+    )
 }

@@ -33,6 +33,7 @@ import dev.sushil.focusblock.domain.model.RuleType
 import dev.sushil.focusblock.ui.apps.AppPicker
 import dev.sushil.focusblock.ui.common.AppIcon
 import dev.sushil.focusblock.ui.common.appContainer
+import dev.sushil.focusblock.ui.lock.PasswordDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,10 +41,20 @@ fun ProfileEditScreen(profileId: Long, onClose: () -> Unit) {
     val container = appContainer()
     val vm: ProfileEditViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { ProfileEditViewModel(profileId, container.profileRepository, container.installedAppsRepository) }
+            initializer {
+                ProfileEditViewModel(profileId, container.profileRepository, container.installedAppsRepository, container.editGuard)
+            }
         },
     )
     var pickingApps by rememberSaveable { mutableStateOf(false) }
+
+    if (vm.passwordNeededFor != null) {
+        PasswordDialog(
+            message = "Lock mode: loosening a profile needs your password.",
+            onUnlocked = { vm.onPasswordAccepted() },
+            onDismiss = vm::onPasswordDismissed,
+        )
+    }
 
     // The app picker is part of this screen so the selection lives in one ViewModel
     if (pickingApps) {
@@ -96,6 +107,7 @@ fun ProfileEditScreen(profileId: Long, onClose: () -> Unit) {
             }
             OutlinedButton(onClick = { pickingApps = true }) { Text("Choose apps") }
 
+            vm.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Button(
                 onClick = { vm.save(onClose) },
                 enabled = vm.canSave,

@@ -24,6 +24,7 @@ class BlockerAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
+        engine.onWindowEvent(pkg, event.className?.toString())
         engine.onForeground(pkg)
     }
 

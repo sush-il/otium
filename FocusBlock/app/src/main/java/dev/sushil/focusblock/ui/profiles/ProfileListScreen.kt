@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,6 +39,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.sushil.focusblock.domain.model.Profile
 import dev.sushil.focusblock.ui.common.appContainer
+import dev.sushil.focusblock.ui.lock.PasswordDialog
 import dev.sushil.focusblock.util.Permissions
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,11 +49,26 @@ fun ProfileListScreen(
     onNewProfile: () -> Unit,
     onOpenSetup: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenModes: () -> Unit,
 ) {
     val container = appContainer()
     val vm: ProfileListViewModel = viewModel(
-        factory = viewModelFactory { initializer { ProfileListViewModel(container.profileRepository) } },
+        factory = viewModelFactory { initializer { ProfileListViewModel(container.profileRepository, container.editGuard) } },
     )
+    vm.error?.let { message ->
+        AlertDialog(
+            onDismissRequest = vm::dismissError,
+            text = { Text(message) },
+            confirmButton = { TextButton(onClick = vm::dismissError) { Text("OK") } },
+        )
+    }
+    if (vm.passwordNeededFor != null) {
+        PasswordDialog(
+            message = "Lock mode: turning a profile off needs your password.",
+            onUnlocked = { vm.onPasswordAccepted() },
+            onDismiss = vm::dismissPassword,
+        )
+    }
     val profiles by vm.profiles.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
@@ -65,7 +82,10 @@ fun ProfileListScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Focus Block") },
-                actions = { TextButton(onClick = onOpenSettings) { Text("Settings") } },
+                actions = {
+                    TextButton(onClick = onOpenModes) { Text("Modes") }
+                    TextButton(onClick = onOpenSettings) { Text("Settings") }
+                },
             )
         },
         floatingActionButton = {
