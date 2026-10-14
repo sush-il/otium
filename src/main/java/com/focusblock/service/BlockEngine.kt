@@ -291,6 +291,7 @@ class BlockEngine(
         switchJob = scope.launch {
             delay(SWITCH_DEBOUNCE_MS)
             pendingPkg = null
+            log("foreground -> $pkg")
             if (pkg != currentSitePkg) clearCurrentSite()
             current = pkg
             startWatching(pkg)
@@ -387,15 +388,17 @@ class BlockEngine(
         current = null
 
         log("blocking $pkg: $reason (accessibility=${accessibility != null})")
-        // Without accessibility (polling path), starting activities from the background is
-        // allowed because we hold "Display over other apps"
-        goHome()
-        context.startActivity(
-            Intent(context, BlockActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                .putExtra(BlockActivity.EXTRA_PACKAGE, pkg)
-                .putExtra(BlockActivity.EXTRA_REASON, reason),
-        )
+        // Show the block screen over the app. No "go home" first: that action lands a moment
+        // later and covers the block screen. The block screen goes home when dismissed.
+        val shown = runCatching {
+            context.startActivity(
+                Intent(context, BlockActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    .putExtra(BlockActivity.EXTRA_PACKAGE, pkg)
+                    .putExtra(BlockActivity.EXTRA_REASON, reason),
+            )
+        }.isSuccess
+        if (!shown) goHome()
     }
 
     private sealed interface Guard {

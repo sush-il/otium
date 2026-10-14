@@ -50,7 +50,10 @@ class BlockerAccessibilityService : AccessibilityService() {
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 engine.onWindowEvent(pkg, event.className?.toString())
-                engine.onForeground(pkg)
+                // Judge "which app is in front" by the focused window, not by whichever window
+                // fired the event: launchers and other apps draw overlays over the real app.
+                val active = rootInActiveWindow?.packageName?.toString() ?: pkg
+                engine.onForeground(active)
                 checkContent(pkg)
             }
             // Only browsers/feeds do content work; everything else returns immediately (cheap)
