@@ -76,7 +76,7 @@ fun RuleTypeSelector(type: RuleType, onChange: (RuleType) -> Unit) {
 /** Hourly limit picker (5–55 min). */
 @Composable
 fun MinutesLimitEditor(label: String, minutes: Int, max: Int, onChange: (Int) -> Unit) {
-    DurationPicker(label, minutes, 5, max, listOf(5, 10, 15, 30, 45), onChange)
+    DurationPicker(label, minutes, 5, max, listOf(5, 10, 15, 30), onChange)
 }
 
 /**
@@ -85,9 +85,9 @@ fun MinutesLimitEditor(label: String, minutes: Int, max: Int, onChange: (Int) ->
  */
 @Composable
 fun DurationPicker(label: String, minutes: Int, min: Int, max: Int, presets: List<Int>, onChange: (Int) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally)) {
             FilledTonalIconButton(onClick = { onChange((minutes - 5).coerceAtLeast(min)) }) { Text("−", style = MaterialTheme.typography.titleLarge) }
             Text(formatDuration(minutes), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
             FilledTonalIconButton(onClick = { onChange((minutes + 5).coerceAtMost(max)) }) { Icon(Icons.Default.Add, "More") }
@@ -98,7 +98,7 @@ fun DurationPicker(label: String, minutes: Int, min: Int, max: Int, presets: Lis
             valueRange = min.toFloat()..max.toFloat(),
             steps = (max - min) / 5 - 1,
         )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
             presets.forEach { p ->
                 FilterChip(selected = minutes == p, onClick = { onChange(p) }, label = { Text(formatDuration(p)) })
             }
