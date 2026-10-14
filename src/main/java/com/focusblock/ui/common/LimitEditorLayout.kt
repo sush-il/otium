@@ -87,6 +87,9 @@ fun LimitEditorLayout(
     // null = sheet closed; PICK = choose a kind; a RuleType = configure that kind
     var sheet by remember { mutableStateOf<SheetStep?>(null) }
     val existing = rows.map { it.type }.toSet()
+    // Always show in the same order as the kind list (daily, hourly, then the rest)
+    val order = kinds(siteMode).map { it.type }
+    val sortedRows = rows.sortedBy { order.indexOf(it.type) }
 
     fun saved(message: String) {
         sheet = null
@@ -136,7 +139,7 @@ fun LimitEditorLayout(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 4.dp),
                 )
-                rows.forEach { row ->
+                sortedRows.forEach { row ->
                     val kind = kindOf(row.type, siteMode)
                     Card(
                         modifier = Modifier.fillMaxWidth().clickable {
