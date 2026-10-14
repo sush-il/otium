@@ -8,7 +8,10 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Shapes
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 
 // Indigo/violet brand, used when the device can't supply Material You colours
@@ -48,6 +51,15 @@ private val BrandLight = lightColorScheme(
     onErrorContainer = Color(0xFF410002),
 )
 
+// Soft, rounded shapes for a friendly Material 3 feel (cards default to `medium`)
+private val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(28.dp),
+    extraLarge = RoundedCornerShape(32.dp),
+)
+
 @Composable
 fun FocusBlockTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
@@ -60,5 +72,5 @@ fun FocusBlockTheme(content: @Composable () -> Unit) {
         dark -> BrandDark
         else -> BrandLight
     }
-    MaterialTheme(colorScheme = colors, content = content)
+    MaterialTheme(colorScheme = colors, shapes = AppShapes, content = content)
 }
