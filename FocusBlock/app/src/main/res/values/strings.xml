@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Focus Block</string>
+    <string name="accessibility_service_label">Focus Block app blocker</string>
+    <string name="accessibility_description">Detects which app is opened so Focus Block can block the apps you chose. It does not read screen content and nothing leaves your phone.</string>
 </resources>
