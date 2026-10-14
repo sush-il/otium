@@ -17,3 +17,4 @@ captures/
 .DS_Store
 *:sec.endpointdlp
 .zed/
+reference/jadx.log

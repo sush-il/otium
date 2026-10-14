@@ -1,0 +1,4 @@
+<resources>
+    <!-- Window theme only; the real UI theme is Compose (ui/theme/Theme.kt) -->
+    <style name="Theme.FocusBlock" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
