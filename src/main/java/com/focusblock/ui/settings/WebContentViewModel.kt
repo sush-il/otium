@@ -15,7 +15,9 @@ import kotlinx.coroutines.launch
 class WebContentViewModel(
     private val settings: SettingsStore,
     siteLimits: SiteLimitRepository,
+    guard: com.focusblock.ui.common.EditGuard,
 ) : ViewModel() {
+    val pause = com.focusblock.ui.common.LimitPause(settings, guard, viewModelScope)
 
     /** Blocked site hosts with their stacked rules, grouped and sorted. */
     val sites: StateFlow<Map<String, List<SiteLimit>>> =

@@ -60,6 +60,11 @@ class SettingsStore(context: Context) {
     /** Hour (0-23) when the "day" resets for daily limits and launch counts. Default midnight. */
     val dayResetHour: Flow<Int> = store.data.map { (it[DAY_RESET_HOUR] ?: 0).coerceIn(0, 23) }
 
+    /** Apps/sites whose limits are paused: "app:<package>" or "site:<host>". Limits stay saved. */
+    val pausedLimits: Flow<Set<String>> = store.data.map { it[PAUSED_LIMITS] ?: emptySet() }
+
+    suspend fun setPausedLimits(value: Set<String>) = store.edit { it[PAUSED_LIMITS] = value }
+
     suspend fun setTimerDisplay(value: TimerDisplay) {
         store.edit { it[TIMER_DISPLAY] = value.name }
     }
@@ -100,6 +105,7 @@ class SettingsStore(context: Context) {
     suspend fun setDayResetHour(value: Int) = store.edit { it[DAY_RESET_HOUR] = value.coerceIn(0, 23) }
 
     private companion object {
+        val PAUSED_LIMITS = stringSetPreferencesKey("paused_limits")
         val TIMER_DISPLAY = stringPreferencesKey("timer_display")
         val LOW_TIME_ALERTS = booleanPreferencesKey("low_time_alerts")
         val EXCLUDED_APPS = stringSetPreferencesKey("excluded_apps")

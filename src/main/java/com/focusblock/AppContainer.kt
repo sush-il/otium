@@ -21,6 +21,7 @@ import com.focusblock.ui.common.EditGuard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -54,6 +55,13 @@ class AppContainer(context: Context) {
                 usageRepository.dayResetHour = it
                 siteUsageTracker.dayResetHour = it
             }
+        }
+        // Forget pauses for apps/sites that no longer have any limit, so a re-added limit isn't silently paused
+        appScope.launch {
+            combine(appLimitRepository.limits, siteLimitRepository.limits, settingsStore.pausedLimits) { apps, sites, paused ->
+                val live = apps.map { "app:${it.packageName}" }.toSet() + sites.map { "site:${it.host}" }.toSet()
+                paused.filter { it in live }.toSet().takeIf { it != paused }
+            }.collect { pruned -> if (pruned != null) settingsStore.setPausedLimits(pruned) }
         }
         // One-time: move old directly-blocked apps into the stackable app-limits table
         appScope.launch {

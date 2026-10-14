@@ -37,6 +37,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.focusblock.ui.common.BackButton
+import com.focusblock.ui.common.PauseButton
+import com.focusblock.ui.common.PauseDialogs
+import com.focusblock.ui.common.sitePauseKey
 import com.focusblock.ui.common.appContainer
 import com.focusblock.ui.sites.summary
 
@@ -45,9 +48,11 @@ import com.focusblock.ui.sites.summary
 fun WebContentScreen(onBack: () -> Unit, onOpenSite: (String) -> Unit) {
     val container = appContainer()
     val vm: WebContentViewModel = viewModel(
-        factory = viewModelFactory { initializer { WebContentViewModel(container.settingsStore, container.siteLimitRepository) } },
+        factory = viewModelFactory { initializer { WebContentViewModel(container.settingsStore, container.siteLimitRepository, container.editGuard) } },
     )
     val sites by vm.sites.collectAsStateWithLifecycle()
+    val paused by vm.pause.paused.collectAsStateWithLifecycle()
+    PauseDialogs(vm.pause)
 
     Scaffold(
         topBar = {
@@ -78,11 +83,12 @@ fun WebContentScreen(onBack: () -> Unit, onOpenSite: (String) -> Unit) {
                                 Column(Modifier.weight(1f)) {
                                     Text(host, style = MaterialTheme.typography.bodyLarge)
                                     Text(
-                                        rules.joinToString(" · ") { it.summary() },
+                                        (if (sitePauseKey(host) in paused) "Paused · " else "") + rules.joinToString(" · ") { it.summary() },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary,
                                     )
                                 }
+                                PauseButton(sitePauseKey(host) in paused) { vm.pause.toggle(sitePauseKey(host)) }
                                 Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }

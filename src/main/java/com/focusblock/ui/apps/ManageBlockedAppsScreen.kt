@@ -37,7 +37,13 @@ import com.focusblock.data.AppLimitRepository
 import com.focusblock.data.InstalledApp
 import com.focusblock.data.InstalledAppsRepository
 import com.focusblock.domain.model.AppLimit
+import com.focusblock.data.SettingsStore
 import com.focusblock.ui.common.AppIcon
+import com.focusblock.ui.common.EditGuard
+import com.focusblock.ui.common.LimitPause
+import com.focusblock.ui.common.PauseButton
+import com.focusblock.ui.common.PauseDialogs
+import com.focusblock.ui.common.appPauseKey
 import com.focusblock.ui.common.appContainer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,7 +55,10 @@ import kotlinx.coroutines.launch
 class ManageBlockedAppsViewModel(
     installedApps: InstalledAppsRepository,
     appLimits: AppLimitRepository,
+    settings: SettingsStore,
+    guard: EditGuard,
 ) : ViewModel() {
+    val pause = LimitPause(settings, guard, viewModelScope)
     val apps = MutableStateFlow<List<InstalledApp>?>(null)
     val limitsByPkg: StateFlow<Map<String, List<AppLimit>>> =
         appLimits.limits.map { all -> all.groupBy { it.packageName } }
@@ -66,11 +75,13 @@ class ManageBlockedAppsViewModel(
 fun ManageBlockedAppsScreen(onBack: () -> Unit, onOpenApp: (String) -> Unit) {
     val container = appContainer()
     val vm: ManageBlockedAppsViewModel = viewModel(
-        factory = viewModelFactory { initializer { ManageBlockedAppsViewModel(container.installedAppsRepository, container.appLimitRepository) } },
+        factory = viewModelFactory { initializer { ManageBlockedAppsViewModel(container.installedAppsRepository, container.appLimitRepository, container.settingsStore, container.editGuard) } },
     )
     val apps by vm.apps.collectAsStateWithLifecycle()
     val limits by vm.limitsByPkg.collectAsStateWithLifecycle()
+    val paused by vm.pause.paused.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
+    PauseDialogs(vm.pause)
 
     Scaffold(
         topBar = {
@@ -109,11 +120,15 @@ fun ManageBlockedAppsScreen(onBack: () -> Unit, onOpenApp: (String) -> Unit) {
                             Text(app.label, style = MaterialTheme.typography.bodyLarge)
                             if (!appRules.isNullOrEmpty()) {
                                 Text(
-                                    appRules.joinToString(" · ") { it.summary() },
+                                    (if (appPauseKey(app.packageName) in paused) "Paused · " else "") + appRules.joinToString(" · ") { it.summary() },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary,
                                 )
                             }
+                        }
+                        if (!appRules.isNullOrEmpty()) {
+                            val key = appPauseKey(app.packageName)
+                            PauseButton(key in paused) { vm.pause.toggle(key) }
                         }
                         Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

@@ -81,6 +81,7 @@ class BlockEngine(
     @Volatile private var keywordBlockingEnabled: Boolean = true
     @Volatile private var appLimitProfiles: List<Profile> = emptyList()
     @Volatile private var siteLimits: List<SiteLimit> = emptyList()
+    @Volatile private var pausedLimits: Set<String> = emptySet()
     @Volatile private var siteLimitHosts: Set<String> = emptySet()
 
     // Which website host the current browser is showing, if it has site rules
@@ -138,6 +139,12 @@ class BlockEngine(
             }
         }
         scope.launch { settingsStore.keywordBlockingEnabled.collect { keywordBlockingEnabled = it } }
+        scope.launch {
+            settingsStore.pausedLimits.collect {
+                pausedLimits = it
+                current?.let { pkg -> startWatching(pkg) }
+            }
+        }
         scope.launch {
             appLimitRepository.limits.collect { limits ->
                 appLimitProfiles = limits.map { it.asProfile() }
@@ -344,7 +351,7 @@ class BlockEngine(
             val result = withContext(Dispatchers.Default) {
                 val now = LocalDateTime.now()
                 if (site != null) {
-                    val rules = siteLimits.filter { it.host == site }.map { it.asProfile() }
+                    val rules = siteLimits.filter { it.host == site && "site:$site" !in pausedLimits }.map { it.asProfile() }
                     Triple(
                         BlockEvaluator.evaluate(site, now, rules, siteUsage),
                         BlockEvaluator.nextRecheck(site, now, rules, siteUsage),
