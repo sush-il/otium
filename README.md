@@ -10,7 +10,8 @@ An offline Android app and website blocker. Pick the apps and sites that eat you
 - **Per-app and per-site limits** – quick daily limits for a single app or website, stacked on top of your profiles. Browsers are read for the address, so a site can be limited even though the browser itself is allowed.
 - **Keywords** – block pages whose address contains words you choose.
 - **Shorts / Reels / adult content** – close YouTube Shorts, Instagram Reels and Facebook Reels without blocking the whole app, and block a bundled list of adult sites.
-- **Time-left timer** – a small floating tab shows how much time an app has left, plus a brief flash at 10, 5 and 1 minutes.
+- **Focus session** – one tap on Home blocks the whole phone for 15–90 minutes, except your phone app, keyboard and excluded apps. Ending it early means typing the same long number as Lock mode.
+- **Time-left timer** – a small floating tab shows how much time an app has left. At 10, 5 and 1 minutes left it opens by itself on the live countdown, turns amber and gives a soft buzz.
 - **Block screen** – when a rule says no, a calm full-screen page says why and sends you home.
 - **Modes** – how hard it is to loosen your own rules:
   - **Normal** – change anything any time.

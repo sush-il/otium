@@ -25,6 +25,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -71,14 +73,15 @@ fun DigitsField(value: String, onChange: (String) -> Unit, label: String, maxLen
 }
 
 /**
- * Lock mode's "password": type a fresh number shown on screen. A wrong answer gives a new
- * number, so it can't be retried from memory. A correct one switches to Normal mode (optionally
- * switching Lock back on after an hour) and then runs [onUnlocked], which does the [action].
+ * Type a fresh number shown on screen. A wrong answer gives a new number, so it can't be
+ * retried from memory. [extra] sits between the field and the button; [onSolved] runs on success.
  */
 @Composable
-fun PasswordForm(
-    action: String,
-    onUnlocked: () -> Unit,
+fun ChallengeGate(
+    prompt: String,
+    buttonLabel: String,
+    onSolved: () -> Unit,
+    extra: @Composable () -> Unit = {},
 ) {
     val modeStore = appContainer().modeStore
     val length by modeStore.state.map { it.lockLength ?: NumberChallenges.MIN_LENGTH }.collectAsState(initial = NumberChallenges.MIN_LENGTH)
@@ -86,39 +89,74 @@ fun PasswordForm(
     val challenge = remember(length, attempt) { NumberChallenges.generate(length) }
     var input by remember(attempt) { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
-    var relock by remember { mutableStateOf(true) }
-    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Type the number to switch to Normal mode and $action.", style = MaterialTheme.typography.bodyLarge)
+        Text(prompt, style = MaterialTheme.typography.bodyLarge)
         ChallengeView(challenge)
-        DigitsField(input, { input = it; error = null }, "Type the number", challenge.digits.length, error)
-        Row(Modifier.fillMaxWidth().clickable { relock = !relock }, verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = relock, onCheckedChange = { relock = it })
-            Text("Lock again in 1 hour", style = MaterialTheme.typography.bodyMedium)
-        }
+        DigitsField(
+            input,
+            {
+                // A soft tick per digit typed (not on delete)
+                if (it.length > input.length) haptic.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+                input = it
+                error = null
+            },
+            "Type the number", challenge.digits.length, error,
+        )
+        extra()
         Button(
             onClick = {
                 if (input == challenge.digits) {
-                    scope.launch {
-                        modeStore.update {
-                            if (it.mode == Mode.LOCK) {
-                                it.copy(mode = Mode.NORMAL, relockAt = if (relock) System.currentTimeMillis() + ModeKeeper.RELOCK_MS else null)
-                            } else {
-                                it
-                            }
-                        }
-                        onUnlocked()
-                    }
+                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                    onSolved()
                 } else {
+                    haptic.performHapticFeedback(HapticFeedbackType.Reject)
                     error = "Not quite. Here's a new number."
                     attempt++
                 }
             },
             enabled = input.length == challenge.digits.length,
             modifier = Modifier.fillMaxWidth(),
-        ) { Text("Unlock") }
+        ) { Text(buttonLabel) }
     }
+}
+
+/**
+ * Lock mode's "password": a correct number switches to Normal mode (optionally switching Lock
+ * back on after an hour) and then runs [onUnlocked], which does the [action].
+ */
+@Composable
+fun PasswordForm(
+    action: String,
+    onUnlocked: () -> Unit,
+) {
+    val modeStore = appContainer().modeStore
+    var relock by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+
+    ChallengeGate(
+        prompt = "Type the number to switch to Normal mode and $action.",
+        buttonLabel = "Unlock",
+        onSolved = {
+            scope.launch {
+                modeStore.update {
+                    if (it.mode == Mode.LOCK) {
+                        it.copy(mode = Mode.NORMAL, relockAt = if (relock) System.currentTimeMillis() + ModeKeeper.RELOCK_MS else null)
+                    } else {
+                        it
+                    }
+                }
+                onUnlocked()
+            }
+        },
+        extra = {
+            Row(Modifier.fillMaxWidth().clickable { relock = !relock }, verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = relock, onCheckedChange = { relock = it })
+                Text("Lock again in 1 hour", style = MaterialTheme.typography.bodyMedium)
+            }
+        },
+    )
 }
 
 @Composable

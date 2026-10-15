@@ -121,6 +121,8 @@ fun ProfileListScreen(
 
             item { ModeCarousel(mode, onOpenModes) }
 
+            item { FocusSessionCard() }
+
             item { SectionHeader("Quick Actions") }
             item { QuickActions(vm, onOpenApps, onOpenSites, onOpenFeeds, onOpenKeywords) }
 

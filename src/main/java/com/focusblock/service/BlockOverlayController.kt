@@ -26,7 +26,6 @@ class BlockOverlayController(
     private val scope: CoroutineScope,
 ) {
     private val overlay = TimerOverlay(context)
-    private val alertOverlay = AlertOverlay(context)
     private val alerts = LowTimeAlerts(context)
 
     @Volatile private var latest: Countdown? = null
@@ -70,11 +69,11 @@ class BlockOverlayController(
         // Mark every threshold already crossed, flash only the most urgent new one
         val newlyReached = THRESHOLDS_MIN.filter { remaining <= it * 60_000L && alerts.markIfNew(c.pkg, it) }
         if (newlyReached.isEmpty()) return
-        val minutes = newlyReached.min()
-        if (Permissions.canDrawOverlays(context)) {
-            alertOverlay.flash("$minutes min left")
+        // The floating tab (if it's up) opens on the live countdown; otherwise fall back to a notification
+        if (overlay.isShowing) {
+            overlay.alert()
         } else {
-            alerts.send(c.pkg, appLabel(c.pkg), minutes)
+            alerts.send(c.pkg, appLabel(c.pkg), newlyReached.min())
         }
     }
 

@@ -33,8 +33,12 @@ data class ModeState(
     val strictUntil: Long? = null,
     /** …or is active only while this schedule runs. */
     val strictSchedule: Schedule? = null,
+    /** A focus session blocks the whole phone (bar the essentials) until this wall-clock time (epoch ms). */
+    val sessionUntil: Long? = null,
     val emergency: EmergencyState = EmergencyState(),
 ) {
+    fun isSessionActive(nowMs: Long): Boolean = sessionUntil != null && nowMs < sessionUntil
+
     val isLock get() = mode == Mode.LOCK
     val hasLock get() = lockLength != null
 

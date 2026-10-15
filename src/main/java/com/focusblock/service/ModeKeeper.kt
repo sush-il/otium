@@ -73,6 +73,7 @@ class ModeKeeper(
         fun leaveToNormal(state: ModeState) = ModeState(
             lock = state.lock,
             strict = state.strict,
+            sessionUntil = state.sessionUntil,
             emergency = EmergencyState(history = state.emergency.history),
         )
     }

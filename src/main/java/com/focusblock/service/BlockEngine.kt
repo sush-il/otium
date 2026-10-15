@@ -342,6 +342,11 @@ class BlockEngine(
             }
             null -> Unit
         }
+        // A running focus session blocks everything except the essentials, whatever the profiles say
+        sessionBlockReason(pkg)?.let {
+            block(pkg, it)
+            return
+        }
         while (true) {
             // A browser showing a limited website is judged on the SITE's rules and time;
             // everything else is judged on the app's rules.
@@ -381,6 +386,12 @@ class BlockEngine(
             // Usage stats can lag a little, so never spin faster than once a second
             delay(recheckIn.toMillis().coerceAtLeast(MIN_RECHECK_MS))
         }
+    }
+
+    private fun sessionBlockReason(pkg: String): String? {
+        val until = modeState.sessionUntil ?: return null
+        if (System.currentTimeMillis() >= until || pkg in wholePhoneExcluded()) return null
+        return "Focus session until " + SESSION_END_FORMAT.format(Instant.ofEpochMilli(until).atZone(ZoneId.systemDefault()))
     }
 
     private fun block(pkg: String, reason: String) {
@@ -523,6 +534,7 @@ class BlockEngine(
             "com.google.android.packageinstaller",
             "com.samsung.android.packageinstaller",
         )
+        val SESSION_END_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
         const val DEBOUNCE_MS = 1_000L
         const val SWITCH_DEBOUNCE_MS = 450L
         const val REDIRECT_DEBOUNCE_MS = 2_500L

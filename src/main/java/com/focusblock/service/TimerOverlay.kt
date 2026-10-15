@@ -4,7 +4,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
+import android.os.SystemClock
 import android.util.TypedValue
+import android.view.HapticFeedbackConstants
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.ViewConfiguration
@@ -25,6 +27,11 @@ class TimerOverlay(private val context: Context) {
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private var view: TextView? = null
     private var expanded = false
+    private var background: GradientDrawable? = null
+
+    // Low-time alert: the tab opens by itself and turns amber until this time (elapsedRealtime)
+    private var alertUntil = 0L
+    private var expandedBeforeAlert = false
 
     // Latest values, so a tap can redraw without waiting for the next tick
     private var lastLabel = ""
@@ -45,16 +52,36 @@ class TimerOverlay(private val context: Context) {
     val isShowing get() = view != null
 
     fun update(appLabel: String, kind: TimeLeft.Kind, remainingMs: Long) {
+        if (alertUntil != 0L && SystemClock.elapsedRealtime() >= alertUntil) endAlert()
         lastLabel = appLabel
         lastKind = kind
         lastRemaining = remainingMs
         render()
     }
 
+    /** Opens the tab on the live countdown and highlights it, so the warning and the timer are one thing. */
+    fun alert(durationMs: Long = ALERT_MS) {
+        val v = view ?: return
+        if (alertUntil == 0L) expandedBeforeAlert = expanded
+        alertUntil = SystemClock.elapsedRealtime() + durationMs
+        expanded = true
+        background?.setColor(ALERT_COLOR)
+        render()
+        v.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+    }
+
+    private fun endAlert() {
+        alertUntil = 0L
+        expanded = expandedBeforeAlert
+        background?.setColor(NORMAL_COLOR)
+    }
+
     fun hide() {
         view?.let { windowManager.removeView(it) }
         view = null
         expanded = false
+        alertUntil = 0L
+        background = null
     }
 
     private fun render() {
@@ -75,8 +102,8 @@ class TimerOverlay(private val context: Context) {
                 // Rounded on the right only, so it reads as a tab coming from the left edge
                 val r = dp(22).toFloat()
                 cornerRadii = floatArrayOf(0f, 0f, r, r, r, r, 0f, 0f)
-                setColor(0xE6202124.toInt())
-            }
+                setColor(NORMAL_COLOR)
+            }.also { background = it }
         }
         val slop = ViewConfiguration.get(context).scaledTouchSlop
         var downY = 0f
@@ -99,7 +126,9 @@ class TimerOverlay(private val context: Context) {
                     }
                 }
                 MotionEvent.ACTION_UP -> if (!dragging) {
-                    expanded = !expanded
+                    v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    // Tapping during an alert just dismisses the highlight
+                    if (alertUntil != 0L) endAlert() else expanded = !expanded
                     render()
                 }
             }
@@ -110,4 +139,10 @@ class TimerOverlay(private val context: Context) {
     }
 
     private fun dp(value: Int) = (value * context.resources.displayMetrics.density).toInt()
+
+    private companion object {
+        const val ALERT_MS = 6_000L
+        val NORMAL_COLOR = 0xE6202124.toInt()
+        val ALERT_COLOR = 0xF2B8561B.toInt()
+    }
 }
