@@ -64,3 +64,7 @@ src/main/java/com/focusblock/
 ```
 
 Needs JDK 21 and the Android SDK. For a signed release, add these to `~/.gradle/gradle.properties` (never commit them): `FOCUSBLOCK_STORE_FILE`, `FOCUSBLOCK_STORE_PASSWORD`, `FOCUSBLOCK_KEY_ALIAS`, `FOCUSBLOCK_KEY_PASSWORD`. Without them the release APK is unsigned and won't install. Keep the keystore safe: updates must be signed with the same key.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE). Free to use, change and share.
