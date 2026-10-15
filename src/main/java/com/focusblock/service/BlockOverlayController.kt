@@ -8,6 +8,7 @@ import com.focusblock.data.TimerDisplay
 import com.focusblock.util.Permissions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -54,9 +55,11 @@ class BlockOverlayController(
                     overlay.hide()
                     if (alertsOn) fireAlerts(c)
                 }
-                else -> { // nothing to show; hide once the brief grace has passed
-                    if (overlay.isShowing && SystemClock.elapsedRealtime() - lastShownAt > GRACE_HIDE_MS) overlay.hide()
+                overlay.isShowing -> { // nothing to show; hide once the brief grace has passed
+                    if (SystemClock.elapsedRealtime() - lastShownAt > GRACE_HIDE_MS) overlay.hide()
                 }
+                // Idle: sleep until a countdown appears instead of waking the CPU twice a second
+                else -> engine.countdown.first { it != null }
             }
             delay(TICK_MS)
         }
