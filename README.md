@@ -4,7 +4,7 @@ An offline Android app and website blocker. Pick the apps and sites that eat you
 
 ## What it does
 
-- **Profiles** – groups of apps and sites with their own rules. A rule is a schedule (days and hours), a daily time limit, or a limit on how many times you can open the app.
+- **Profiles** – groups of apps and sites with their own rules. A rule can be: always blocked, blocked on a weekly schedule, a daily or hourly time limit, a limit on how many times you open the app, or blocked until a date and time.
 - **Per-app and per-site limits** – quick daily limits for a single app or website, stacked on top of your profiles. Browsers are read for the address, so a site can be limited even though the browser itself is allowed.
 - **Keywords** – block pages whose address contains words you choose.
 - **Shorts / Reels / adult content** – close YouTube Shorts, Instagram Reels and Facebook Reels without blocking the whole app, and block a bundled list of adult sites.
@@ -12,7 +12,7 @@ An offline Android app and website blocker. Pick the apps and sites that eat you
 - **Block screen** – when a rule says no, a calm full-screen page says why and sends you home.
 - **Modes** – how hard it is to loosen your own rules:
   - **Normal** – change anything any time.
-  - **Lock** – you must type a long random number before you can open the app, Settings or edit profiles.
+  - **Lock** – you must type a long random number before you can edit profiles (and optionally open the app or Settings).
   - **Strict** – set a time or schedule during which rules, Settings and uninstalling are locked. An emergency unlock exists but is slow (a long wait that doubles each time).
 - **Backup, home-screen widget, dark and light themes** (pastel Catppuccin look).
 

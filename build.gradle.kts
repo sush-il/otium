@@ -12,8 +12,8 @@ android {
         applicationId = "com.focusblock"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0-alpha"
+        versionCode = 4
+        versionName = "0.3.1-alpha"
     }
 
     // Release signing: values come from ~/.gradle/gradle.properties so secrets never enter the repo.
