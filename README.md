@@ -1,6 +1,8 @@
 # Otium
 
-An offline Android app and website blocker. Pick the apps and sites that eat your time, set the rules, and Otium closes them when your time is up. Otium is Latin for peaceful free time, the time you get back. Nothing leaves your phone: no account, no internet permission, no ads, no tracking.
+*Otium* is Latin for time free from obligations, used for rest, reflection and things done for their own sake. Ancient Roman writers such as Cicero and Seneca prized it, and it's the time this app gives back to you.
+
+An offline Android app and website blocker. Pick the apps and sites that eat your time, set the rules, and Otium closes them when your time is up. Nothing leaves your phone: no account, no internet permission, no ads, no tracking.
 
 ## What it does
 
