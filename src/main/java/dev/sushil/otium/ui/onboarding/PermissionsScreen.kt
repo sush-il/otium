@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -86,16 +87,6 @@ fun PermissionsScreen(onDone: () -> Unit) {
         Text("Set up blocking", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
 
         Label("Required")
-        if (Permissions.needsRestrictedSettingsStep) {
-            Step(
-                glyph = "🔓",
-                title = "Allow restricted settings",
-                body = "App info → ⋮ menu → \"Allow restricted settings\".",
-                done = state.accessibility,
-                action = "Open App info",
-                onAction = { context.startActivity(Permissions.appDetailsIntent(context)) },
-            )
-        }
         Step(
             glyph = "🛡️",
             title = "Turn on the blocker",
@@ -112,8 +103,28 @@ fun PermissionsScreen(onDone: () -> Unit) {
             action = "Open Usage access",
             onAction = { context.startActivity(Permissions.usageAccessIntent()) },
         )
+        if (Permissions.needsRestrictedSettingsStep) {
+            // Often Android offers this by itself when the toggle above is greyed out
+            Step(
+                glyph = "🔓",
+                title = "If Accessibility is greyed out",
+                body = "App info → ⋮ menu → \"Allow restricted settings\", then try the blocker step again.",
+                done = state.accessibility,
+                action = "Open App info",
+                onAction = { context.startActivity(Permissions.appDetailsIntent(context)) },
+            )
+        }
 
         Label("Recommended")
+        Step(
+            glyph = "🪟",
+            title = "Display over other apps",
+            body = "Shows the floating time-left arrow and lets the block screen appear on top of apps.",
+            done = state.overlay,
+            action = "Open setting",
+            onAction = { context.startActivity(Permissions.overlaySettingsIntent(context)) },
+            highlight = true,
+        )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             Step(
                 glyph = "🔔",
@@ -125,14 +136,6 @@ fun PermissionsScreen(onDone: () -> Unit) {
                 onManage = { context.startActivity(Permissions.notificationSettingsIntent(context)) },
             )
         }
-        Step(
-            glyph = "🪟",
-            title = "Display over other apps",
-            body = "Shows the floating time-left arrow.",
-            done = state.overlay,
-            action = "Open setting",
-            onAction = { context.startActivity(Permissions.overlaySettingsIntent(context)) },
-        )
         Step(
             glyph = "🔋",
             title = "Don't optimise battery",
@@ -162,9 +165,10 @@ private fun Label(text: String) {
 }
 
 @Composable
-private fun Step(glyph: String, title: String, body: String, done: Boolean, action: String, onAction: () -> Unit, onManage: () -> Unit = onAction) {
+private fun Step(glyph: String, title: String, body: String, done: Boolean, action: String, onAction: () -> Unit, onManage: () -> Unit = onAction, highlight: Boolean = false) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        border = if (highlight && !done) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
         colors = CardDefaults.cardColors(
             containerColor = if (done) {
                 MaterialTheme.colorScheme.secondaryContainer
@@ -193,6 +197,9 @@ private fun Step(glyph: String, title: String, body: String, done: Boolean, acti
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                if (highlight && !done) {
+                    Text("HIGHLY RECOMMENDED", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
                 if (!done) {
                     Text(body, style = MaterialTheme.typography.bodyMedium)
                     FilledTonalButton(onClick = onAction, modifier = Modifier.padding(top = 4.dp)) { Text(action) }
