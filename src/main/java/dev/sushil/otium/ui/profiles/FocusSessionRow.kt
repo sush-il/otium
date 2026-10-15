@@ -2,7 +2,9 @@ package dev.sushil.otium.ui.profiles
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -79,27 +81,27 @@ fun FocusSessionRow() {
                     Text("Focus session running", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     Text("Focus session", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        LENGTHS_MIN.forEach { minutes ->
-                            TimeChip("${minutes}m", selected = picked == minutes) {
-                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                picked = minutes
+                    // Chips and Start share one column as wide as the chips, so Start's right edge lines up with the last chip
+                    Column(Modifier.width(IntrinsicSize.Max), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            LENGTHS_MIN.forEach { minutes ->
+                                TimeChip("${minutes}m", selected = picked == minutes) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                    picked = minutes
+                                }
                             }
                         }
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                                scope.launch { modeStore.update { it.copy(sessionUntil = System.currentTimeMillis() + picked * 60_000L) } }
+                            },
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 0.dp),
+                        ) { Text("Start") }
                     }
                 }
             }
-            if (running) {
-                TextButton(onClick = { ending = true }) { Text("End") }
-            } else {
-                Button(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                        scope.launch { modeStore.update { it.copy(sessionUntil = System.currentTimeMillis() + picked * 60_000L) } }
-                    },
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                ) { Text("Start") }
-            }
+            if (running) TextButton(onClick = { ending = true }) { Text("End") }
         }
     }
 

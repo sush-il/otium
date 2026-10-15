@@ -104,11 +104,10 @@ fun PermissionsScreen(onDone: () -> Unit) {
             onAction = { context.startActivity(Permissions.usageAccessIntent()) },
         )
         if (Permissions.needsRestrictedSettingsStep) {
-            // Often Android offers this by itself when the toggle above is greyed out
             Step(
                 glyph = "🔓",
-                title = "If Accessibility is greyed out",
-                body = "App info → ⋮ menu → \"Allow restricted settings\", then try the blocker step again.",
+                title = "Allow restricted settings",
+                body = "App info → ⋮ menu → \"Allow restricted settings\".",
                 done = state.accessibility,
                 action = "Open App info",
                 onAction = { context.startActivity(Permissions.appDetailsIntent(context)) },
@@ -119,7 +118,7 @@ fun PermissionsScreen(onDone: () -> Unit) {
         Step(
             glyph = "🪟",
             title = "Display over other apps",
-            body = "Shows the floating time-left arrow and lets the block screen appear on top of apps.",
+            body = "Shows the floating time-left arrow.",
             done = state.overlay,
             action = "Open setting",
             onAction = { context.startActivity(Permissions.overlaySettingsIntent(context)) },
