@@ -48,7 +48,7 @@ The accessibility service reports window changes to a small engine. The engine c
 Stack: Kotlin, Jetpack Compose (single activity), Room, DataStore, coroutines, manual dependency injection.
 
 ```
-src/main/java/com/focusblock/
+src/main/java/dev/sushil/otium/
   domain/    rule evaluation, modes, emergency unlock (pure Kotlin, unit tested)
   data/      Room database, settings, usage stats, backup
   service/   accessibility service, block engine, timer overlay

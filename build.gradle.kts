@@ -5,15 +5,15 @@ plugins {
 }
 
 android {
-    namespace = "com.focusblock"
+    namespace = "dev.sushil.otium"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.focusblock"
+        applicationId = "dev.sushil.otium"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.1.0"
+        versionCode = 8
+        versionName = "1.2.0"
     }
 
     // Release signing: values come from ~/.gradle/gradle.properties so secrets never enter the repo.

@@ -1,7 +1,7 @@
 <resources>
     <!-- Window chrome only; the real UI theme is Compose (ui/theme/Theme.kt).
          windowBackground matches the Compose surface so there's no flash before Compose draws. -->
-    <style name="Theme.FocusBlock" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.Otium" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
