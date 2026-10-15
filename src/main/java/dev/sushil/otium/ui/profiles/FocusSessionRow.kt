@@ -73,38 +73,38 @@ fun FocusSessionRow() {
             containerColor = if (running) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Badge("🎯")
-            if (running) {
+        if (running) {
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(formatCountdown(remainingMs), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     Text("Focus session running", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 TextButton(onClick = { ending = true }) { Text("End") }
-            } else {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Column {
-                        Text("Focus session", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("Blocks everything but the essentials", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    // Four equal chips fill the column; Start spans the same width underneath
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        LENGTHS_MIN.forEach { minutes ->
-                            TimeChip("${minutes}m", selected = picked == minutes, modifier = Modifier.weight(1f)) {
-                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                picked = minutes
-                            }
+            }
+        } else {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Title and a short description share one line
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Focus session", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text("Blocks all apps", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                // Four equal chips fill the width; Start spans the same width underneath
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LENGTHS_MIN.forEach { minutes ->
+                        TimeChip("${minutes}m", selected = picked == minutes, modifier = Modifier.weight(1f)) {
+                            haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                            picked = minutes
                         }
                     }
-                    Button(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                            scope.launch { modeStore.update { it.copy(sessionUntil = System.currentTimeMillis() + picked * 60_000L) } }
-                        },
-                        modifier = Modifier.fillMaxWidth().height(36.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                    ) { Text("Start") }
                 }
+                Button(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                        scope.launch { modeStore.update { it.copy(sessionUntil = System.currentTimeMillis() + picked * 60_000L) } }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(36.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                ) { Text("Start") }
             }
         }
     }
