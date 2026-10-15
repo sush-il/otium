@@ -2,9 +2,8 @@ package dev.sushil.otium.ui.profiles
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.sushil.otium.ui.common.appContainer
@@ -40,7 +40,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
-private val LENGTHS_MIN = listOf(20, 30, 60)
+private val LENGTHS_MIN = listOf(15, 30, 45, 60)
 
 /**
  * A quick-start row for focus sessions (everything blocked bar the essentials): pick a length,
@@ -73,35 +73,39 @@ fun FocusSessionRow() {
             containerColor = if (running) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Badge("🎯")
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (running) {
+            if (running) {
+                Column(Modifier.weight(1f)) {
                     Text(formatCountdown(remainingMs), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     Text("Focus session running", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    Text("Focus session", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    // Chips and Start share one column as wide as the chips, so Start's right edge lines up with the last chip
-                    Column(Modifier.width(IntrinsicSize.Max), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            LENGTHS_MIN.forEach { minutes ->
-                                TimeChip("${minutes}m", selected = picked == minutes) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                    picked = minutes
-                                }
+                }
+                TextButton(onClick = { ending = true }) { Text("End") }
+            } else {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column {
+                        Text("Focus session", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Blocks everything but the essentials", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    // Four equal chips fill the column; Start spans the same width underneath
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        LENGTHS_MIN.forEach { minutes ->
+                            TimeChip("${minutes}m", selected = picked == minutes, modifier = Modifier.weight(1f)) {
+                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                picked = minutes
                             }
                         }
-                        Button(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                                scope.launch { modeStore.update { it.copy(sessionUntil = System.currentTimeMillis() + picked * 60_000L) } }
-                            },
-                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 0.dp),
-                        ) { Text("Start") }
                     }
+                    Button(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                            scope.launch { modeStore.update { it.copy(sessionUntil = System.currentTimeMillis() + picked * 60_000L) } }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(36.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                    ) { Text("Start") }
                 }
             }
-            if (running) TextButton(onClick = { ending = true }) { Text("End") }
         }
     }
 
@@ -125,15 +129,16 @@ fun FocusSessionRow() {
     }
 }
 
-/** A small selectable pill, sized to fit three in a row next to the Start button. */
+/** A small selectable pill; the caller gives it a weight so a row of them fills the width evenly. */
 @Composable
-private fun TimeChip(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun TimeChip(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
+        modifier = modifier,
         shape = CircleShape,
         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
         contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
-        Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 5.dp))
     }
 }

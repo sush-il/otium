@@ -12,8 +12,8 @@ android {
         applicationId = "dev.sushil.otium"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.2.2"
+        versionCode = 11
+        versionName = "1.2.3"
     }
 
     // Release signing: values come from ~/.gradle/gradle.properties so secrets never enter the repo.
