@@ -3,15 +3,14 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Ring with a diagonal bar: a simple "no entry" mark -->
+    <!-- An "O" ring left open at the top, with a calm dot inside: free time you get back -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="6"
-        android:pathData="M54,32a22,22 0,1 1,0 44a22,22 0,1 1,0 -44z" />
+        android:strokeColor="#CBA6F7"
+        android:strokeWidth="8"
+        android:strokeLineCap="round"
+        android:pathData="M63.3,34.06A22,22 0,1 1 44.7,34.06" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="6"
-        android:pathData="M38.5,38.5L69.5,69.5" />
+        android:fillColor="#F5C2E7"
+        android:pathData="M54,48.5a5.5,5.5 0,1 1,0 11a5.5,5.5 0,1 1,0 -11z" />
 </vector>

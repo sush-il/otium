@@ -103,7 +103,7 @@ fun ProfileListScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Focus Block",
+                        "Otium",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                     )

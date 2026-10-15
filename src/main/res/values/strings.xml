@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name">Focus Block</string>
-    <string name="accessibility_service_label">Focus Block app blocker</string>
-    <string name="accessibility_description">Detects which app is open, and reads the address bar in browsers, so Focus Block can block apps and websites you chose. Nothing leaves your phone.</string>
+    <string name="app_name">Otium</string>
+    <string name="accessibility_service_label">Otium app blocker</string>
+    <string name="accessibility_description">Detects which app is open, and reads the address bar in browsers, so Otium can block apps and websites you chose. Nothing leaves your phone.</string>
     <string name="channel_status">Blocker status</string>
-    <string name="notification_active">Focus Block is active</string>
+    <string name="notification_active">Otium is active</string>
     <string name="channel_alerts">Low-time alerts</string>
 </resources>

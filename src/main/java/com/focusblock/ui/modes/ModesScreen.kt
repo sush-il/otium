@@ -214,7 +214,7 @@ private fun LockSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
 
 @Composable
 private fun LockOptionSwitches(options: LockOptions, onChange: (LockOptions) -> Unit) {
-    OptionSwitch("Number to open Focus Block", options.lockApp) { onChange(options.copy(lockApp = it)) }
+    OptionSwitch("Number to open Otium", options.lockApp) { onChange(options.copy(lockApp = it)) }
     OptionSwitch("Number to open phone Settings", options.lockSettings) { onChange(options.copy(lockSettings = it)) }
     OptionSwitch("Number to loosen or delete profiles", options.lockProfiles) { onChange(options.copy(lockProfiles = it)) }
     Text(
@@ -320,7 +320,7 @@ private fun StrictSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
     }
 
     Text(
-        "While Strict is on you can't switch it off, loosen or delete profiles, or uninstall Focus Block. " +
+        "While Strict is on you can't switch it off, loosen or delete profiles, or uninstall Otium. " +
             "The only early exit is the emergency unlock, which takes at least 3 days. Type I understand to continue.",
         color = MaterialTheme.colorScheme.error,
     )

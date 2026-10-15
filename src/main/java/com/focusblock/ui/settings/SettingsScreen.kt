@@ -119,7 +119,7 @@ fun SettingsScreen(
             item { SectionLabel("Data") }
             item {
                 SettingsGroup {
-                    NavRow("💾", "Back up", "Save profiles & settings to a file") { exporter.launch("focusblock-backup.json") }
+                    NavRow("💾", "Back up", "Save profiles & settings to a file") { exporter.launch("otium-backup.json") }
                     Divider()
                     NavRow(
                         "↩️",

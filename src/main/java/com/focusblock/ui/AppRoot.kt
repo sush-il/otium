@@ -44,9 +44,9 @@ fun AppRoot(openEmergency: Boolean, onEmergencyClosed: () -> Unit) {
                 modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(32.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
             ) {
-                Text("Focus Block is locked", style = MaterialTheme.typography.headlineMedium)
+                Text("Otium is locked", style = MaterialTheme.typography.headlineMedium)
                 PasswordForm(
-                    action = "open Focus Block",
+                    action = "open Otium",
                     onUnlocked = {}, // the mode flips to Normal, which opens the app
                 )
             }

@@ -14,7 +14,7 @@ import android.content.Intent
 class FocusAdminReceiver : DeviceAdminReceiver() {
 
     override fun onDisableRequested(context: Context, intent: Intent): CharSequence =
-        "This removes Focus Block's uninstall protection."
+        "This removes Otium's uninstall protection."
 
     companion object {
         fun component(context: Context) = ComponentName(context, FocusAdminReceiver::class.java)
@@ -28,7 +28,7 @@ class FocusAdminReceiver : DeviceAdminReceiver() {
                 .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, component(context))
                 .putExtra(
                     DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                    "Stops Focus Block from being uninstalled while Strict mode is on.",
+                    "Stops Otium from being uninstalled while Strict mode is on.",
                 )
 
         /** An app can always remove its own admin rights without asking. */

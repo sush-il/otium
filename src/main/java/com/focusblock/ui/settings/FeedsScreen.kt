@@ -53,7 +53,7 @@ fun FeedsScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                "When on, Focus Block closes these feeds with Back as soon as they open. The rest of the app stays usable.",
+                "When on, Otium closes these feeds with Back as soon as they open. The rest of the app stays usable.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

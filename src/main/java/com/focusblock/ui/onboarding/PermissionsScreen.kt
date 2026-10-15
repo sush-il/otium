@@ -99,7 +99,7 @@ fun PermissionsScreen(onDone: () -> Unit) {
         Step(
             glyph = "🛡️",
             title = "Turn on the blocker",
-            body = "Accessibility → Focus Block → On. Reacts instantly when an app opens.",
+            body = "Accessibility → Otium → On. Reacts instantly when an app opens.",
             done = state.accessibility,
             action = "Open Accessibility",
             onAction = { context.startActivity(Permissions.accessibilitySettingsIntent()) },

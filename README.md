@@ -1,6 +1,6 @@
-# Focus Block
+# Otium
 
-An offline Android app and website blocker. Pick the apps and sites that eat your time, set the rules, and Focus Block closes them when your time is up. Nothing leaves your phone: no account, no internet permission, no ads, no tracking.
+An offline Android app and website blocker. Pick the apps and sites that eat your time, set the rules, and Otium closes them when your time is up. Otium is Latin for peaceful free time, the time you get back. Nothing leaves your phone: no account, no internet permission, no ads, no tracking.
 
 ## What it does
 
@@ -18,8 +18,8 @@ An offline Android app and website blocker. Pick the apps and sites that eat you
 
 ## Install
 
-1. Download `FocusBlock-<version>.apk` from the [Releases](../../releases) page and open it. Android will ask to allow installs from your browser or file manager.
-2. Open Focus Block and grant the permissions below. It walks you through each one.
+1. Download `Otium-<version>.apk` from the [Releases](../../releases) page and open it. Android will ask to allow installs from your browser or file manager.
+2. Open Otium and grant the permissions below. It walks you through each one.
 
 Needs Android 8.0 (API 26) or newer.
 
