@@ -42,6 +42,8 @@ An offline Android app and website blocker. Pick the apps and sites that eat you
 
 Needs Android 8.0 (API 26) or newer.
 
+To get updates automatically, add this repo's URL to [Obtainium](https://github.com/ImranR98/Obtainium). It watches the Releases page and tells you when a new version is out.
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE). Free to use, change and share.
