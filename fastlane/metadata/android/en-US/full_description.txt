@@ -1,0 +1,28 @@
+Otium is an offline Android app and website blocker. Pick the apps and sites that eat your time, set the rules, and Otium closes them when your time is up.
+
+Nothing leaves your phone: no account, no internet permission, no ads, no tracking.
+
+<b>What it does</b>
+• Profiles: groups of apps and sites with their own rules. Always blocked, a weekly schedule, a daily or hourly time limit, a limit on how many times you open the app, or blocked until a date and time.
+• Per-app and per-site limits: daily limits for a single app or website, stacked on top of your profiles.
+• Keywords: block pages whose address contains words you choose.
+• Shorts, Reels and adult content: close YouTube Shorts, Instagram Reels and Facebook Reels without blocking the whole app, and block a bundled list of adult sites.
+• Focus session: one tap on Home blocks the whole phone for a set time, except your phone app, keyboard and excluded apps.
+• Time-left timer: a small floating tab shows how much time an app has left, and opens by itself at 10, 5 and 1 minutes left.
+• Block screen: when a rule says no, a calm full-screen page says why and sends you home.
+• Backup, home-screen widget, dark and light themes.
+
+<b>Modes</b>
+• Normal: change anything any time.
+• Lock: type a long random number before you can edit lock settings.
+• Strict: set a time or schedule during which rules, Settings and uninstalling are locked. An emergency unlock exists but is slow.
+
+<b>Permissions</b>
+• Accessibility service: knows which app is in front and reads the browser address bar. It never reads other screen content and sends nothing anywhere.
+• Usage access: counts daily time spent per app.
+• Display over other apps: shows the floating timer and the block screen.
+• Notifications: low-time alerts.
+• Device admin (optional): only for Strict mode, to stop the app being uninstalled.
+• See all installed apps: so the app picker lists everything.
+
+Needs Android 8.0 or newer. Open source under the MIT licence.
