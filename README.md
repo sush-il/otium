@@ -4,6 +4,14 @@
 
 An offline Android app and website blocker. Pick the apps and sites that eat your time, set the rules, and Otium closes them when your time is up. Nothing leaves your phone: no account, no internet permission, no ads, no tracking.
 
+<p align="center">
+  <img src="docs/screenshots/otium_home.jpg" width="160" alt="Home" />
+  <img src="docs/screenshots/otium_time_limits.jpg" width="160" alt="Time limits" />
+  <img src="docs/screenshots/otium_floating_timer.jpg" width="160" alt="Floating timer" />
+  <img src="docs/screenshots/otium_blocked_page.jpg" width="160" alt="Block screen" />
+  <img src="docs/screenshots/otium_settings_page.jpg" width="160" alt="Settings" />
+</p>
+
 ## What it does
 
 - **Profiles** – groups of apps and sites with their own rules. A rule can be: always blocked, blocked on a weekly schedule, a daily or hourly time limit, a limit on how many times you open the app, or blocked until a date and time.
