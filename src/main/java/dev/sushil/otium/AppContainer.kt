@@ -40,7 +40,7 @@ class AppContainer(context: Context) {
     private val contentRegistry = ContentRegistry(context)
     val blockEngine = BlockEngine(context, profileRepository, appLimitRepository, siteLimitRepository, usageRepository, siteUsageTracker, modeStore, settingsStore, browserRegistry, contentRegistry)
     val editGuard = EditGuard(modeStore)
-    val backupManager = BackupManager(context, profileRepository, settingsStore)
+    val backupManager = BackupManager(context, profileRepository, settingsStore, appLimitRepository, siteLimitRepository)
 
     // Process-wide background work that isn't tied to a screen
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

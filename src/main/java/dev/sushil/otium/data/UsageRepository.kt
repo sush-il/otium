@@ -23,38 +23,49 @@ class UsageRepository(private val context: Context) : UsageSource {
     /**
      * Foreground milliseconds for [pkg] between [start] and now, from raw events.
      *
-     * A foreground span starts on ACTIVITY_RESUMED and ends on ACTIVITY_PAUSED/STOPPED,
-     * on the screen turning off, or on shutdown. Ending on screen-off fixes the old
-     * over-count (a resume with no pause used to count as "open all day"), and counting
-     * the still-open span up to now includes the session the user is in right now, which
-     * Android's aggregated daily total doesn't report until later.
+     * The app is in front while at least one of its activities is resumed. Moving between
+     * two screens of one app (e.g. Instagram feed -> comments) arrives as PAUSED(A),
+     * RESUMED(B), STOPPED(A); tracking activities individually stops that STOPPED(A) from
+     * ending B's span, which used to make the used time drop and the timer jump back up.
+     *
+     * A span also ends on the screen turning off or on shutdown, and the still-open span
+     * counts up to now (Android's aggregated daily total only reports it later).
      */
     private fun foregroundMsSince(pkg: String, start: Long): Long? {
         if (!Permissions.hasUsageAccess(context)) return null
         val now = System.currentTimeMillis()
-        val events = usageStats.queryEvents(start, now)
+        // Look back before [start] so a session already open at the hour/day boundary is
+        // still seen; its time is clipped to [start] below.
+        val events = usageStats.queryEvents(start - LOOKBACK_MS, now)
         val event = UsageEvents.Event()
+        val resumed = HashSet<String>()
         var total = 0L
         var since: Long? = null
+        fun endSpan(at: Long) {
+            since?.let { total += (at - maxOf(it, start)).coerceAtLeast(0) }
+            since = null
+            resumed.clear()
+        }
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
             when (event.eventType) {
                 UsageEvents.Event.ACTIVITY_RESUMED ->
-                    if (event.packageName == pkg && since == null) since = event.timeStamp
+                    if (event.packageName == pkg) {
+                        resumed.add(event.className.orEmpty())
+                        if (since == null) since = event.timeStamp
+                    }
                 UsageEvents.Event.ACTIVITY_PAUSED, UsageEvents.Event.ACTIVITY_STOPPED ->
-                    if (event.packageName == pkg) since = endSpan(since, event.timeStamp) { total += it }
+                    if (event.packageName == pkg) {
+                        resumed.remove(event.className.orEmpty())
+                        if (resumed.isEmpty()) endSpan(event.timeStamp)
+                    }
                 // Global events (any package): the app is no longer in front
                 UsageEvents.Event.SCREEN_NON_INTERACTIVE, UsageEvents.Event.DEVICE_SHUTDOWN ->
-                    since = endSpan(since, event.timeStamp) { total += it }
+                    endSpan(event.timeStamp)
             }
         }
-        since?.let { total += now - it } // still in front right now
+        since?.let { total += (now - maxOf(it, start)).coerceAtLeast(0) } // still in front right now
         return total
-    }
-
-    private inline fun endSpan(since: Long?, endAt: Long, add: (Long) -> Unit): Long? {
-        since?.let { add(endAt - it) }
-        return null
     }
 
     /** A launch = the app comes to the front after a different app was in front. */
@@ -84,4 +95,8 @@ class UsageRepository(private val context: Context) : UsageSource {
 
     private fun startOfHour() = LocalDateTime.now().withMinute(0).withSecond(0).withNano(0)
         .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+    private companion object {
+        const val LOOKBACK_MS = 6 * 60 * 60 * 1000L
+    }
 }

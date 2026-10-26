@@ -75,12 +75,16 @@ fun SettingsScreen(
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             runCatching { backup.importFrom(uri) }
-                .onSuccess { Toast.makeText(context, "Restored", Toast.LENGTH_SHORT).show() }
+                .onSuccess {
+                    val skipped = if (it.appsSkipped > 0) ", ${it.appsSkipped} not installed (skipped)" else ""
+                    Toast.makeText(context, "Restored ${it.appsRestored} apps, ${it.sitesRestored} sites$skipped", Toast.LENGTH_LONG).show()
+                }
                 .onFailure { Toast.makeText(context, "Restore failed", Toast.LENGTH_LONG).show() }
         }
     }
     val strictActive = mode?.isStrictActive(LocalDateTime.now(), System.currentTimeMillis()) == true
     var pickingReset by remember { mutableStateOf(false) }
+    var confirmRestore by remember { mutableStateOf(false) }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Settings") }) }) { padding ->
         LazyColumn(
@@ -119,13 +123,13 @@ fun SettingsScreen(
             item { SectionLabel("Data") }
             item {
                 SettingsGroup {
-                    NavRow("💾", "Back up", "Save profiles & settings to a file") { exporter.launch("otium-backup.json") }
+                    NavRow("💾", "Back up", "Save profiles, app & site limits and settings to a file") { exporter.launch("otium-backup.json") }
                     Divider()
                     NavRow(
                         "↩️",
                         "Restore",
                         if (strictActive) "Off while Strict mode is on" else "Load from a backup file",
-                        { if (!strictActive) importer.launch(arrayOf("application/json")) },
+                        { if (!strictActive) confirmRestore = true },
                     )
                 }
             }
@@ -137,6 +141,21 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (confirmRestore) {
+        AlertDialog(
+            onDismissRequest = { confirmRestore = false },
+            title = { Text("Restore backup?") },
+            text = { Text("Apps and sites in the backup will have their current limits overwritten. Profiles are replaced. Other apps are left as they are.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmRestore = false
+                    importer.launch(arrayOf("application/json"))
+                }) { Text("Choose file") }
+            },
+            dismissButton = { TextButton(onClick = { confirmRestore = false }) { Text("Cancel") } },
+        )
     }
 
     if (pickingReset) {
