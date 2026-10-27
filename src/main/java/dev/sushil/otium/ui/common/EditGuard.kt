@@ -42,6 +42,9 @@ class EditGuard(private val modeStore: ModeStore) {
         return EditCheck.Allowed
     }
 
+    /** True while Lock mode is on, i.e. a pause should be short. */
+    suspend fun isLockMode(): Boolean = modeStore.current().let { it.isLock && it.hasLock }
+
     /** Turning any protection OFF is loosening, so it follows the mode rules. */
     suspend fun checkLoosen(): EditCheck {
         val state = modeStore.current()

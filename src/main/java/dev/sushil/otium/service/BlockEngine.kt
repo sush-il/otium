@@ -80,7 +80,7 @@ class BlockEngine(
     @Volatile private var keywordBlockingEnabled: Boolean = true
     @Volatile private var appLimitProfiles: List<Profile> = emptyList()
     @Volatile private var siteLimits: List<SiteLimit> = emptyList()
-    @Volatile private var pausedLimits: Set<String> = emptySet()
+    @Volatile private var pausedLimits: Map<String, Long> = emptyMap()
     @Volatile private var siteLimitHosts: Set<String> = emptySet()
 
     // Which website host the current browser is showing, if it has site rules
@@ -316,6 +316,9 @@ class BlockEngine(
         _countdown.value = null
     }
 
+    /** A pause only counts until its end time, even if the cleanup job hasn't removed it yet. */
+    private fun isPaused(key: String) = (pausedLimits[key] ?: 0L) > System.currentTimeMillis()
+
     private fun startWatching(pkg: String) {
         checkJob?.cancel()
         checkJob = null
@@ -354,7 +357,7 @@ class BlockEngine(
             val result = withContext(Dispatchers.Default) {
                 val now = LocalDateTime.now()
                 if (site != null) {
-                    val rules = siteLimits.filter { it.host == site && "site:$site" !in pausedLimits }.map { it.asProfile() }
+                    val rules = siteLimits.filter { it.host == site && !isPaused("site:$site") }.map { it.asProfile() }
                     Triple(
                         BlockEvaluator.evaluate(site, now, rules, siteUsage),
                         BlockEvaluator.nextRecheck(site, now, rules, siteUsage),
@@ -362,7 +365,7 @@ class BlockEngine(
                     )
                 } else {
                     // Master app-blocking switch off → nothing app-based blocks
-                    val rules = if (!appBlockingEnabled) emptyList() else profiles + appLimitProfiles.filter { p -> p.packages.none { "app:$it" in pausedLimits } }
+                    val rules = if (!appBlockingEnabled) emptyList() else profiles + appLimitProfiles.filter { p -> p.packages.none { isPaused("app:$it") } }
                     val cached = CachingUsageSource(usage) // read each usage value at most once
                     val excluded = wholePhoneExcluded()
                     Triple(

@@ -60,10 +60,21 @@ class SettingsStore(context: Context) {
     /** Hour (0-23) when the "day" resets for daily limits and launch counts. Default midnight. */
     val dayResetHour: Flow<Int> = store.data.map { (it[DAY_RESET_HOUR] ?: 0).coerceIn(0, 23) }
 
-    /** Apps/sites whose limits are paused: "app:<package>" or "site:<host>". Limits stay saved. */
-    val pausedLimits: Flow<Set<String>> = store.data.map { it[PAUSED_LIMITS] ?: emptySet() }
+    /**
+     * Apps/sites whose limits are paused, each with the time (epoch ms) the pause ends:
+     * "app:<package>" or "site:<host>". Limits stay saved.
+     */
+    val pausedLimits: Flow<Map<String, Long>> = store.data.map { prefs ->
+        prefs[PAUSED_UNTIL].orEmpty().mapNotNull { entry ->
+            val split = entry.lastIndexOf('|')
+            entry.substring(split + 1).toLongOrNull()?.let { entry.substring(0, split) to it }
+        }.toMap()
+    }
 
-    suspend fun setPausedLimits(value: Set<String>) = store.edit { it[PAUSED_LIMITS] = value }
+    suspend fun setPausedLimits(value: Map<String, Long>) = store.edit {
+        it[PAUSED_UNTIL] = value.map { (key, until) -> "$key|$until" }.toSet()
+        it.remove(PAUSED_LIMITS) // old format, pauses without an end time
+    }
 
     suspend fun setTimerDisplay(value: TimerDisplay) {
         store.edit { it[TIMER_DISPLAY] = value.name }
@@ -106,6 +117,7 @@ class SettingsStore(context: Context) {
 
     private companion object {
         val PAUSED_LIMITS = stringSetPreferencesKey("paused_limits")
+        val PAUSED_UNTIL = stringSetPreferencesKey("paused_limits_until")
         val TIMER_DISPLAY = stringPreferencesKey("timer_display")
         val LOW_TIME_ALERTS = booleanPreferencesKey("low_time_alerts")
         val EXCLUDED_APPS = stringSetPreferencesKey("excluded_apps")

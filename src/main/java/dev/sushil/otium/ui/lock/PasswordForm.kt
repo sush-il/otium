@@ -122,35 +122,48 @@ fun ChallengeGate(
 /**
  * Lock mode's "password": a correct number switches to Normal mode and then runs
  * [onUnlocked], which does the [action]. Lock stays off until the user turns it on again.
+ * With [switchToNormal] off, Lock stays on and the number only allows this one [action];
+ * [note] is shown above the button.
  */
 @Composable
 fun PasswordForm(
     action: String,
     onUnlocked: () -> Unit,
+    switchToNormal: Boolean = true,
+    note: String? = null,
 ) {
     val modeStore = appContainer().modeStore
     val scope = rememberCoroutineScope()
 
     ChallengeGate(
-        prompt = "Type the number to switch to Normal mode and $action.",
+        prompt = if (switchToNormal) "Type the number to switch to Normal mode and $action." else "Type the number to $action.",
         buttonLabel = "Unlock",
         onSolved = {
             scope.launch {
                 modeStore.update {
-                    if (it.mode == Mode.LOCK) it.copy(mode = Mode.NORMAL) else it
+                    if (switchToNormal && it.mode == Mode.LOCK) it.copy(mode = Mode.NORMAL) else it
                 }
                 onUnlocked()
             }
+        },
+        extra = {
+            note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         },
     )
 }
 
 @Composable
-fun PasswordDialog(action: String, onUnlocked: () -> Unit, onDismiss: () -> Unit) {
+fun PasswordDialog(
+    action: String,
+    onUnlocked: () -> Unit,
+    onDismiss: () -> Unit,
+    switchToNormal: Boolean = true,
+    note: String? = null,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Lock mode is on") },
-        text = { PasswordForm(action, onUnlocked) },
+        text = { PasswordForm(action, onUnlocked, switchToNormal, note) },
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )

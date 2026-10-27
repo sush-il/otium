@@ -20,6 +20,8 @@ import dev.sushil.otium.ui.common.EditGuard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -58,8 +60,17 @@ class AppContainer(context: Context) {
         appScope.launch {
             combine(appLimitRepository.limits, siteLimitRepository.limits, settingsStore.pausedLimits) { apps, sites, paused ->
                 val live = apps.map { "app:${it.packageName}" }.toSet() + sites.map { "site:${it.host}" }.toSet()
-                paused.filter { it in live }.toSet().takeIf { it != paused }
+                paused.filterKeys { it in live }.takeIf { it.size != paused.size }
             }.collect { pruned -> if (pruned != null) settingsStore.setPausedLimits(pruned) }
+        }
+        // Pauses end by themselves: once the earliest one is due, drop it so blocking comes back
+        appScope.launch {
+            settingsStore.pausedLimits.collectLatest { paused ->
+                val next = paused.values.minOrNull() ?: return@collectLatest
+                delay((next - System.currentTimeMillis()).coerceAtLeast(0))
+                val now = System.currentTimeMillis()
+                settingsStore.setPausedLimits(paused.filterValues { it > now })
+            }
         }
         // One-time: move old directly-blocked apps into the stackable app-limits table
         appScope.launch {

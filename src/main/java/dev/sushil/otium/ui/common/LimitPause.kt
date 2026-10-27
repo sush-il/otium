@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import dev.sushil.otium.data.SettingsStore
+import dev.sushil.otium.domain.PauseWindow
 import dev.sushil.otium.ui.lock.PasswordDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,6 +30,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 fun appPauseKey(pkg: String) = "app:$pkg"
 fun sitePauseKey(host: String) = "site:$host"
@@ -36,14 +39,16 @@ fun sitePauseKey(host: String) = "site:$host"
 /**
  * Pause / resume all limits on one app or site. Limits stay saved; the engine just skips
  * paused ones. Pausing loosens blocking, so it follows Lock/Strict mode; resuming is free.
+ * A pause ends by itself: after 30 minutes in Lock mode (the number is typed, Lock stays on),
+ * or at the next day reset in Normal mode.
  */
 class LimitPause(private val settings: SettingsStore, private val guard: EditGuard, private val scope: CoroutineScope) {
-    val paused: StateFlow<Set<String>> =
-        settings.pausedLimits.stateIn(scope, SharingStarted.WhileSubscribed(5_000), emptySet())
+    val paused: StateFlow<Map<String, Long>> =
+        settings.pausedLimits.stateIn(scope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     var error by mutableStateOf<String?>(null)
     var notice by mutableStateOf<String?>(null)
-    var passwordNeededFor by mutableStateOf<(() -> Unit)?>(null)
+    var passwordNeededFor by mutableStateOf<String?>(null)
 
     fun toggle(key: String) {
         scope.launch {
@@ -54,20 +59,29 @@ class LimitPause(private val settings: SettingsStore, private val guard: EditGua
                 return@launch
             }
             when (val check = guard.checkLoosen()) {
-                EditCheck.Allowed -> {
-                    settings.setPausedLimits(current + key)
-                    notice = "Blocking paused"
-                }
-                EditCheck.NeedsPassword -> passwordNeededFor = { toggle(key) }
+                EditCheck.Allowed -> pause(key)
+                EditCheck.NeedsPassword -> passwordNeededFor = key
                 is EditCheck.Forbidden -> error = check.reason
             }
         }
     }
 
+    /** The number was typed for [passwordNeededFor]; pause it without asking the guard again. */
     fun onPasswordAccepted() {
-        val retry = passwordNeededFor
+        val key = passwordNeededFor ?: return
         passwordNeededFor = null
-        retry?.invoke()
+        scope.launch { pause(key) }
+    }
+
+    private suspend fun pause(key: String) {
+        val now = LocalDateTime.now()
+        val until = if (guard.isLockMode()) {
+            now.plusMinutes(PauseWindow.LOCK_MODE_MINUTES)
+        } else {
+            PauseWindow.nextReset(now, settings.dayResetHour.first())
+        }
+        settings.setPausedLimits(settings.pausedLimits.first() + (key to until.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()))
+        notice = "Blocking paused until " + (if (until.toLocalDate() == now.toLocalDate()) "" else "tomorrow ") + "%02d:%02d".format(until.hour, until.minute)
     }
 }
 
@@ -88,7 +102,13 @@ fun PauseDialogs(pause: LimitPause) {
         )
     }
     if (pause.passwordNeededFor != null) {
-        PasswordDialog("pause blocking", { pause.onPasswordAccepted() }, { pause.passwordNeededFor = null })
+        PasswordDialog(
+            action = "pause blocking",
+            onUnlocked = { pause.onPasswordAccepted() },
+            onDismiss = { pause.passwordNeededFor = null },
+            switchToNormal = false,
+            note = "This only lasts ${PauseWindow.LOCK_MODE_MINUTES} minutes. To keep it off longer, switch to Normal mode.",
+        )
     }
 }
 
