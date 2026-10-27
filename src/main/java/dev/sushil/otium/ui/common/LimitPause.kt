@@ -75,14 +75,13 @@ class LimitPause(private val settings: SettingsStore, private val guard: EditGua
 
     private suspend fun pause(key: String) {
         val now = LocalDateTime.now()
-        val lockMode = guard.isLockMode()
-        val until = if (lockMode) {
+        val until = if (guard.isLockMode()) {
             now.plusMinutes(PauseWindow.LOCK_MODE_MINUTES)
         } else {
             PauseWindow.nextReset(now, settings.dayResetHour.first())
         }
         settings.setPausedLimits(settings.pausedLimits.first() + (key to until.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()))
-        notice = if (lockMode) "Blocking paused for ${PauseWindow.LOCK_MODE_MINUTES} minutes" else "Blocking paused until end of day"
+        notice = "Blocking paused until %02d:%02d".format(until.hour, until.minute)
     }
 }
 

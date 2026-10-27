@@ -177,7 +177,7 @@ private const val SAMPLE_DIGITS = 4
 
 @Composable
 private fun LockSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
-    var length by remember { mutableIntStateOf(15) }
+    var length by remember { mutableIntStateOf(20) }
     var options by remember { mutableStateOf(LockOptions()) }
     // A short sample to confirm; the real numbers use the length chosen below
     val sample = remember { NumberChallenges.generate(SAMPLE_DIGITS) }
