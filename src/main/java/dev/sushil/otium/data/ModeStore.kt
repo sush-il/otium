@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dev.sushil.otium.domain.NumberChallenges
 import dev.sushil.otium.domain.model.EmergencyState
 import dev.sushil.otium.domain.model.LockOptions
 import dev.sushil.otium.domain.model.Mode
@@ -36,7 +37,7 @@ class ModeStore(context: Context) {
 
     private fun Preferences.toModeState() = ModeState(
         mode = this[MODE]?.let { runCatching { Mode.valueOf(it) }.getOrNull() } ?: Mode.NORMAL,
-        lockLength = this[LOCK_LENGTH],
+        lockLength = this[LOCK_LENGTH]?.coerceAtLeast(NumberChallenges.MIN_LENGTH), // older, shorter numbers are raised to the minimum
         relockAt = this[RELOCK_AT],
         lock = LockOptions(
             lockApp = this[LOCK_APP] ?: false,

@@ -15,7 +15,7 @@ data class NumberChallenge(val digits: String, val title: String, val about: Str
  * random, so the digits can't be memorised.
  */
 object NumberChallenges {
-    const val MIN_LENGTH = 10
+    const val MIN_LENGTH = 15
     const val MAX_LENGTH = 40
 
     private class Constant(val title: String, val about: String, val decimals: String)

@@ -197,7 +197,7 @@ private fun LockSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
     DigitsField(typed, { typed = it }, "Type the number", SAMPLE_DIGITS)
     Text("Digits to unlock later", style = MaterialTheme.typography.labelLarge)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(10, 15, 20, 30, 40).forEach { n ->
+        listOf(15, 20, 30, 40).forEach { n ->
             FilterChip(selected = length == n, onClick = { length = n }, label = { Text("$n") })
         }
     }
