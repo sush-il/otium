@@ -1,7 +1,6 @@
 package dev.sushil.otium.ui.lock
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -35,7 +33,6 @@ import androidx.compose.ui.unit.sp
 import dev.sushil.otium.domain.NumberChallenge
 import dev.sushil.otium.domain.NumberChallenges
 import dev.sushil.otium.domain.model.Mode
-import dev.sushil.otium.service.ModeKeeper
 import dev.sushil.otium.ui.common.appContainer
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -123,8 +120,8 @@ fun ChallengeGate(
 }
 
 /**
- * Lock mode's "password": a correct number switches to Normal mode (optionally switching Lock
- * back on after an hour) and then runs [onUnlocked], which does the [action].
+ * Lock mode's "password": a correct number switches to Normal mode and then runs
+ * [onUnlocked], which does the [action]. Lock stays off until the user turns it on again.
  */
 @Composable
 fun PasswordForm(
@@ -132,7 +129,6 @@ fun PasswordForm(
     onUnlocked: () -> Unit,
 ) {
     val modeStore = appContainer().modeStore
-    var relock by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
     ChallengeGate(
@@ -141,19 +137,9 @@ fun PasswordForm(
         onSolved = {
             scope.launch {
                 modeStore.update {
-                    if (it.mode == Mode.LOCK) {
-                        it.copy(mode = Mode.NORMAL, relockAt = if (relock) System.currentTimeMillis() + ModeKeeper.RELOCK_MS else null)
-                    } else {
-                        it
-                    }
+                    if (it.mode == Mode.LOCK) it.copy(mode = Mode.NORMAL) else it
                 }
                 onUnlocked()
-            }
-        },
-        extra = {
-            Row(Modifier.fillMaxWidth().clickable { relock = !relock }, verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = relock, onCheckedChange = { relock = it })
-                Text("Lock again in 1 hour", style = MaterialTheme.typography.bodyMedium)
             }
         },
     )

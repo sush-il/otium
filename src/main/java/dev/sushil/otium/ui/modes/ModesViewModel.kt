@@ -30,7 +30,7 @@ class ModesViewModel(private val store: ModeStore) : ViewModel() {
 
     /** One tap: Lock mode on again with the saved length and options. */
     fun relock() {
-        viewModelScope.launch { store.update { if (it.hasLock) it.copy(mode = Mode.LOCK, relockAt = null) else it } }
+        viewModelScope.launch { store.update { if (it.hasLock) it.copy(mode = Mode.LOCK) else it } }
     }
 
     fun setLockOptions(options: LockOptions) {

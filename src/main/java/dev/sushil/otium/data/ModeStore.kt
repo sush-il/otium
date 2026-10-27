@@ -38,7 +38,6 @@ class ModeStore(context: Context) {
     private fun Preferences.toModeState() = ModeState(
         mode = this[MODE]?.let { runCatching { Mode.valueOf(it) }.getOrNull() } ?: Mode.NORMAL,
         lockLength = this[LOCK_LENGTH]?.coerceAtLeast(NumberChallenges.MIN_LENGTH), // older, shorter numbers are raised to the minimum
-        relockAt = this[RELOCK_AT],
         lock = LockOptions(
             lockApp = this[LOCK_APP] ?: false,
             lockSettings = this[LOCK_SETTINGS] ?: false,
@@ -66,7 +65,6 @@ class ModeStore(context: Context) {
     private fun MutablePreferences.write(s: ModeState) {
         this[MODE] = s.mode.name
         setOrRemove(LOCK_LENGTH, s.lockLength)
-        setOrRemove(RELOCK_AT, s.relockAt)
         this[LOCK_APP] = s.lock.lockApp
         this[LOCK_SETTINGS] = s.lock.lockSettings
         this[LOCK_PROFILES] = s.lock.lockProfiles
@@ -91,7 +89,6 @@ class ModeStore(context: Context) {
     private companion object {
         val MODE = stringPreferencesKey("mode")
         val LOCK_LENGTH = intPreferencesKey("lock_length")
-        val RELOCK_AT = longPreferencesKey("relock_at")
         val LOCK_APP = booleanPreferencesKey("lock_app")
         val LOCK_SETTINGS = booleanPreferencesKey("lock_settings")
         val LOCK_PROFILES = booleanPreferencesKey("lock_profiles")
