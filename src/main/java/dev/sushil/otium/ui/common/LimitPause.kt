@@ -75,13 +75,14 @@ class LimitPause(private val settings: SettingsStore, private val guard: EditGua
 
     private suspend fun pause(key: String) {
         val now = LocalDateTime.now()
-        val until = if (guard.isLockMode()) {
+        val lockMode = guard.isLockMode()
+        val until = if (lockMode) {
             now.plusMinutes(PauseWindow.LOCK_MODE_MINUTES)
         } else {
             PauseWindow.nextReset(now, settings.dayResetHour.first())
         }
         settings.setPausedLimits(settings.pausedLimits.first() + (key to until.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()))
-        notice = "Blocking paused until " + (if (until.toLocalDate() == now.toLocalDate()) "" else "tomorrow ") + "%02d:%02d".format(until.hour, until.minute)
+        notice = if (lockMode) "Blocking paused for ${PauseWindow.LOCK_MODE_MINUTES} minutes" else "Blocking paused until end of day"
     }
 }
 
@@ -103,11 +104,12 @@ fun PauseDialogs(pause: LimitPause) {
     }
     if (pause.passwordNeededFor != null) {
         PasswordDialog(
+            title = "Pause for ${PauseWindow.LOCK_MODE_MINUTES} minutes",
             action = "pause blocking",
             onUnlocked = { pause.onPasswordAccepted() },
             onDismiss = { pause.passwordNeededFor = null },
             switchToNormal = false,
-            note = "This only lasts ${PauseWindow.LOCK_MODE_MINUTES} minutes. To keep it off longer, switch to Normal mode.",
+            note = "For longer, switch to Normal mode.",
         )
     }
 }

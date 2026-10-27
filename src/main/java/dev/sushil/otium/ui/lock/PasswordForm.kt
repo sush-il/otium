@@ -159,10 +159,11 @@ fun PasswordDialog(
     onDismiss: () -> Unit,
     switchToNormal: Boolean = true,
     note: String? = null,
+    title: String = "Lock mode is on",
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Lock mode is on") },
+        title = { Text(title) },
         text = { PasswordForm(action, onUnlocked, switchToNormal, note) },
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
