@@ -46,4 +46,4 @@ To get updates automatically, add this repo's URL to [Obtainium](https://github.
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE). Free to use, change and share.
+GPL-3.0. See [LICENSE](LICENSE). Free to use, change and share, but any version you distribute must stay open source under the same licence.

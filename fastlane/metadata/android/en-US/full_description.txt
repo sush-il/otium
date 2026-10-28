@@ -25,4 +25,4 @@ Nothing leaves your phone: no account, no internet permission, no ads, no tracki
 • Device admin (optional): only for Strict mode, to stop the app being uninstalled.
 • See all installed apps: so the app picker lists everything.
 
-Needs Android 8.0 or newer. Open source under the MIT licence.
+Needs Android 8.0 or newer. Open source under the GPL-3.0 licence.
