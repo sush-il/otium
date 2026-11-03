@@ -27,7 +27,10 @@ import dev.sushil.otium.ui.lock.PasswordDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -42,9 +45,20 @@ fun sitePauseKey(host: String) = "site:$host"
  * A pause ends by itself: after 30 minutes in Lock mode (the number is typed, Lock stays on),
  * or at the next day reset in Normal mode.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class LimitPause(private val settings: SettingsStore, private val guard: EditGuard, private val scope: CoroutineScope) {
+    // Only pauses still running. Re-emits the moment the earliest one ends, so the lock icon
+    // flips back to "blocked" on its own instead of waiting for the stored entry to be cleaned up.
     val paused: StateFlow<Map<String, Long>> =
-        settings.pausedLimits.stateIn(scope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+        settings.pausedLimits.transformLatest { stored ->
+            var active = stored.filterValues { it > System.currentTimeMillis() }
+            while (true) {
+                emit(active)
+                val next = active.values.minOrNull() ?: break
+                delay((next - System.currentTimeMillis()).coerceAtLeast(0))
+                active = active.filterValues { it > System.currentTimeMillis() }
+            }
+        }.stateIn(scope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     var error by mutableStateOf<String?>(null)
     var notice by mutableStateOf<String?>(null)
@@ -52,7 +66,8 @@ class LimitPause(private val settings: SettingsStore, private val guard: EditGua
 
     fun toggle(key: String) {
         scope.launch {
-            val current = settings.pausedLimits.first()
+            val now = System.currentTimeMillis()
+            val current = settings.pausedLimits.first().filterValues { it > now }
             if (key in current) {
                 settings.setPausedLimits(current - key)
                 notice = "Blocking back on"
