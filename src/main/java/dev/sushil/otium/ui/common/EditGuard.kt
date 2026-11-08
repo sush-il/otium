@@ -56,4 +56,16 @@ class EditGuard(private val modeStore: ModeStore) {
         }
         return EditCheck.Allowed
     }
+
+    /**
+     * Turning adult-site blocking OFF. Adult sites' own Strict window wins; without one
+     * it follows the app-wide mode like any other protection.
+     */
+    suspend fun checkLoosenAdult(): EditCheck {
+        val state = modeStore.current()
+        if (state.isAdultStrictActive(LocalDateTime.now(), System.currentTimeMillis())) {
+            return EditCheck.Forbidden("Strict is on for adult sites, so they can't be unblocked yet.")
+        }
+        return checkLoosen()
+    }
 }

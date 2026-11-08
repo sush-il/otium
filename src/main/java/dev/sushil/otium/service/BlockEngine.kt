@@ -24,6 +24,7 @@ import dev.sushil.otium.domain.SiteMatcher
 import dev.sushil.otium.domain.UsageSource
 import dev.sushil.otium.domain.model.BlockDecision
 import dev.sushil.otium.domain.model.ModeState
+import dev.sushil.otium.domain.model.STRICT_NO_END
 import dev.sushil.otium.domain.model.Profile
 import dev.sushil.otium.domain.model.SiteLimit
 import dev.sushil.otium.domain.model.RuleType
@@ -431,7 +432,7 @@ class BlockEngine(
         val isSettings = pkg == settingsPackage()
         val isInstaller = pkg in installerPackages()
         if (state.isStrictActive(LocalDateTime.now(), System.currentTimeMillis())) {
-            val until = state.strictUntil?.let { "until " + formatEndTime(it) } ?: "while its schedule runs"
+            val until = state.strictUntil?.let { if (it == STRICT_NO_END) "until unlocked" else "until " + formatEndTime(it) } ?: "while its schedule runs"
             if (isInstaller) return Guard.Block("Uninstalling is blocked by Strict mode $until")
             if (isSettings && state.strict.blockSettings) return Guard.Block("Settings is blocked by Strict mode $until")
             if (pkg == PLAY_STORE && state.strict.blockPlayStore) return Guard.Block("Play Store is blocked by Strict mode $until")

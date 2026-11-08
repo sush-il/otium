@@ -6,13 +6,13 @@ import java.security.SecureRandom
 
 /**
  * The slow way out of Strict mode (Lock mode is escaped by typing its number instead).
- * Pure state transitions; the caller feeds in phone-on time with [tick].
+ * When the wait ends, the app switches to Normal by itself. Pure state transitions;
+ * the caller feeds in phone-on time with [tick].
  */
 object EmergencyUnlock {
     const val HOUR_MS = 3_600_000L
     const val BASE_WAIT_MS = 5 * HOUR_MS
     const val MAX_WAIT_MS = 7 * 24 * HOUR_MS
-    const val WINDOW_MS = 15 * 60_000L
     const val HISTORY_MS = 30 * 24 * HOUR_MS
     const val CHALLENGE_LENGTH = 100
 
@@ -30,22 +30,18 @@ object EmergencyUnlock {
 
     fun cancel(state: EmergencyState) = state.copy(phase = Phase.IDLE, remainingMs = 0)
 
-    /** Count [elapsedMs] of phone-on time. Waiting rolls into the window; a missed window resets. */
+    /** Count [elapsedMs] of phone-on time against the wait. Check [isDone] afterwards. */
     fun tick(state: EmergencyState, elapsedMs: Long): EmergencyState {
-        if (state.phase == Phase.IDLE || elapsedMs <= 0) return state
-        val left = state.remainingMs - elapsedMs
-        if (left > 0) return state.copy(remainingMs = left)
-        return when (state.phase) {
-            Phase.WAITING -> tick(state.copy(phase = Phase.WINDOW, remainingMs = WINDOW_MS), -left)
-            else -> cancel(state) // window missed: start over
-        }
+        if (state.phase != Phase.WAITING || elapsedMs <= 0) return state
+        return state.copy(remainingMs = (state.remainingMs - elapsedMs).coerceAtLeast(0))
     }
 
-    /** Used the window: back to idle, and remember it for escalation. */
-    fun complete(state: EmergencyState, nowMs: Long): EmergencyState {
-        require(state.phase == Phase.WINDOW) { "Emergency unlock isn't ready" }
-        return EmergencyState(history = (state.history + nowMs).filter { nowMs - it < HISTORY_MS })
-    }
+    /** The wait is over: the caller should now switch the user out of Strict. */
+    fun isDone(state: EmergencyState) = state.phase == Phase.WAITING && state.remainingMs <= 0
+
+    /** Back to idle, remembering this unlock (for the escalating wait). */
+    fun complete(state: EmergencyState, nowMs: Long): EmergencyState =
+        EmergencyState(history = (state.history + nowMs).filter { nowMs - it < HISTORY_MS })
 
     fun newChallenge(random: SecureRandom = SecureRandom()): String =
         (1..CHALLENGE_LENGTH).map { ALPHABET[random.nextInt(ALPHABET.length)] }.joinToString("")

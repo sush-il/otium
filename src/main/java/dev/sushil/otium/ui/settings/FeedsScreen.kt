@@ -30,7 +30,7 @@ import dev.sushil.otium.ui.common.appContainer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedsScreen(onBack: () -> Unit) {
+fun FeedsScreen(onBack: () -> Unit, onOpenAdult: () -> Unit) {
     val container = appContainer()
     val vm: FeedsViewModel = viewModel(
         factory = viewModelFactory { initializer { FeedsViewModel(container.settingsStore) } },
@@ -38,7 +38,6 @@ fun FeedsScreen(onBack: () -> Unit) {
     val shorts by vm.youtubeShorts.collectAsStateWithLifecycle()
     val reels by vm.instagramReels.collectAsStateWithLifecycle()
     val fbReels by vm.facebookReels.collectAsStateWithLifecycle()
-    val adult by vm.adult.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -61,10 +60,10 @@ fun FeedsScreen(onBack: () -> Unit) {
             ToggleRow("Block Instagram Reels", reels, vm::setInstagramReels)
             ToggleRow("Block Facebook Reels", fbReels, vm::setFacebookReels)
             HorizontalDivider()
-            ToggleRow("Block adult sites in browsers", adult, vm::setAdult)
+            TextButton(onClick = onOpenAdult) { Text("Adult sites settings ›") }
             Text(
-                "Uses a built-in starter list of adult sites and keywords. These detections rely on the app's current " +
-                    "screen layout and may stop working when YouTube, Instagram or Facebook update.",
+                "These detections rely on the app's current screen layout and may stop working when " +
+                    "YouTube, Instagram or Facebook update.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -63,6 +63,7 @@ fun ProfileListScreen(
     onOpenApps: () -> Unit,
     onOpenSites: () -> Unit,
     onOpenFeeds: () -> Unit,
+    onOpenAdult: () -> Unit,
     onOpenKeywords: () -> Unit,
 ) {
     val container = appContainer()
@@ -122,7 +123,7 @@ fun ProfileListScreen(
             item { ModeCarousel(mode, onOpenModes) }
 
             item { SectionHeader("Quick Actions") }
-            item { QuickActions(vm, onOpenApps, onOpenSites, onOpenFeeds, onOpenKeywords) }
+            item { QuickActions(vm, onOpenApps, onOpenSites, onOpenFeeds, onOpenAdult, onOpenKeywords) }
 
             item { SectionHeader("Profiles") }
             item { AddProfileButton(onNewProfile) }
@@ -211,6 +212,7 @@ private fun QuickActions(
     onOpenApps: () -> Unit,
     onOpenSites: () -> Unit,
     onOpenFeeds: () -> Unit,
+    onOpenAdult: () -> Unit,
     onOpenKeywords: () -> Unit,
 ) {
     val apps by vm.appsBlockedCount.collectAsStateWithLifecycle()
@@ -224,7 +226,7 @@ private fun QuickActions(
         CountRow("📱", "${apps ?: 0}", "Apps blocked", onOpenApps)
         CountRow("🌐", "${sites ?: 0}", "Sites blocked", onOpenSites)
         ToggleRow("🎬", "Reels & Shorts", reels, onConfigure = onOpenFeeds) { vm.setQuick(ProfileListViewModel.Quick.REELS, it) }
-        ToggleRow("🔞", "Adult sites", adult, onConfigure = null) { vm.setQuick(ProfileListViewModel.Quick.ADULT, it) }
+        ToggleRow("🔞", "Adult sites", adult, onConfigure = onOpenAdult) { vm.setQuick(ProfileListViewModel.Quick.ADULT, it) }
         ToggleRow("🔤", "Keywords", keywords, onConfigure = onOpenKeywords) { vm.setQuick(ProfileListViewModel.Quick.KEYWORDS, it) }
     }
 }

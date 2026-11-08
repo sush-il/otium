@@ -89,16 +89,6 @@ class EmergencyViewModel(private val store: ModeStore) : ViewModel() {
     fun cancel() {
         viewModelScope.launch { store.update { it.copy(emergency = EmergencyUnlock.cancel(it.emergency)) } }
     }
-
-    fun finish(onDone: () -> Unit) {
-        viewModelScope.launch {
-            store.update {
-                if (it.emergency.phase != EmergencyState.Phase.WINDOW) it
-                else ModeKeeper.leaveToNormal(it.copy(emergency = EmergencyUnlock.complete(it.emergency, System.currentTimeMillis())))
-            }
-            onDone()
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -122,7 +112,8 @@ fun EmergencyScreen(onClose: () -> Unit) {
             modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            if (s.mode == Mode.NORMAL) {
+            val adultStrict = s.isAdultStrictActive(java.time.LocalDateTime.now(), System.currentTimeMillis())
+            if (s.mode == Mode.NORMAL && !adultStrict) {
                 Text("You're in Normal mode, so there's nothing to unlock.")
                 return@Column
             }
@@ -130,9 +121,9 @@ fun EmergencyScreen(onClose: () -> Unit) {
                 EmergencyState.Phase.IDLE -> {
                     val wait = EmergencyUnlock.waitFor(s.emergency.history, System.currentTimeMillis())
                     Text(
-                        "This is the slow way out of Strict mode. " +
+                        "This is the slow way out of Strict. " +
                             "Type the text below exactly. Then wait ${formatHours(wait)} of phone-on time (time with the phone off " +
-                            "doesn't count). Your rules stay on while you wait. Each use in the last 30 days doubles the next wait.",
+                            "doesn't count). Your rules stay on while you wait, then it switches to Normal mode by itself. Each use in the last 30 days doubles the next wait.",
                     )
                     Text(
                         vm.challenge.chunked(5).joinToString(" "),
@@ -157,19 +148,11 @@ fun EmergencyScreen(onClose: () -> Unit) {
                 }
                 EmergencyState.Phase.WAITING -> {
                     Text("Waiting", style = MaterialTheme.typography.headlineSmall)
-                    Text("${formatHours(s.emergency.remainingMs)} of phone-on time left. Updated every 30 seconds.")
+                    Text(
+                        "${formatHours(s.emergency.remainingMs)} of phone-on time left. Updated every 30 seconds. " +
+                            "When it reaches zero, Otium switches to Normal mode by itself.",
+                    )
                     OutlinedButton(onClick = vm::cancel) { Text("Cancel emergency unlock") }
-                }
-                EmergencyState.Phase.WINDOW -> {
-                    Text("Ready", style = MaterialTheme.typography.headlineSmall)
-                    Text("You have ${formatHours(s.emergency.remainingMs)} to use this. If you miss it, you start over.")
-                    Button(
-                        onClick = {
-                            vm.finish(onClose)
-                            FocusAdminReceiver.deactivate(context)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text("Switch to Normal mode") }
                 }
             }
         }

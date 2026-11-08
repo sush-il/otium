@@ -34,6 +34,7 @@ import dev.sushil.otium.ui.sites.SiteLimitEditorScreen
 import dev.sushil.otium.ui.apps.ManageBlockedAppsScreen
 import dev.sushil.otium.ui.profiles.ProfileListScreen
 import dev.sushil.otium.ui.settings.ExcludedAppsScreen
+import dev.sushil.otium.ui.settings.AdultSitesScreen
 import dev.sushil.otium.ui.settings.FeedsScreen
 import dev.sushil.otium.ui.settings.KeywordsScreen
 import dev.sushil.otium.ui.settings.SettingsScreen
@@ -50,6 +51,7 @@ object Routes {
     const val EXCLUDED_APPS = "excluded_apps"
     const val WEB_CONTENT = "web_content"
     const val FEEDS = "feeds"
+    const val ADULT = "adult"
     const val KEYWORDS = "keywords"
     const val MANAGE_APPS = "manage_apps"
     const val APP_LIMIT = "app_limit/{pkg}"
@@ -121,6 +123,7 @@ fun AppNavHost() {
                 onOpenApps = { nav.navigate(Routes.MANAGE_APPS) },
                 onOpenSites = { nav.navigate(Routes.WEB_CONTENT) },
                 onOpenFeeds = { nav.navigate(Routes.FEEDS) },
+                onOpenAdult = { nav.navigate(Routes.ADULT) },
                 onOpenKeywords = { nav.navigate(Routes.KEYWORDS) },
             )
         }
@@ -176,7 +179,10 @@ fun AppNavHost() {
             KeywordsScreen(onBack = { nav.popBackStack() })
         }
         composable(Routes.FEEDS) {
-            FeedsScreen(onBack = { nav.popBackStack() })
+            FeedsScreen(onBack = { nav.popBackStack() }, onOpenAdult = { nav.navigate(Routes.ADULT) })
+        }
+        composable(Routes.ADULT) {
+            AdultSitesScreen(onBack = { nav.popBackStack() }, onOpenEmergency = { nav.navigate(Routes.EMERGENCY) })
         }
         composable(
             Routes.PROFILE_EDIT,

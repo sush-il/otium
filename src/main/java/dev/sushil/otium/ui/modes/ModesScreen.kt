@@ -60,9 +60,13 @@ import dev.sushil.otium.domain.model.EmergencyState
 import dev.sushil.otium.domain.model.LockOptions
 import dev.sushil.otium.domain.model.Mode
 import dev.sushil.otium.domain.model.ModeState
+import dev.sushil.otium.domain.model.STRICT_NO_END
 import dev.sushil.otium.domain.model.Schedule
 import dev.sushil.otium.domain.model.StrictOptions
+import dev.sushil.otium.ui.common.StrictEndFormat
+import dev.sushil.otium.ui.common.StrictEndPicker
 import dev.sushil.otium.ui.common.appContainer
+import dev.sushil.otium.ui.common.rememberStrictEndState
 import dev.sushil.otium.domain.NumberChallenges
 import dev.sushil.otium.ui.lock.ChallengeView
 import dev.sushil.otium.ui.lock.DigitsField
@@ -239,53 +243,18 @@ private fun LockActive(vm: ModesViewModel, s: ModeState) {
 
 // ---------- Strict ----------
 
-private enum class StrictEnd { PRESET, CUSTOM, SCHEDULE }
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StrictSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
     val context = LocalContext.current
-    var endKind by remember { mutableStateOf(StrictEnd.PRESET) }
-    var presetHours by remember { mutableIntStateOf(24) }
-    var customEnd by remember { mutableStateOf<LocalDateTime?>(null) }
-    var schedule by remember { mutableStateOf(Schedule(daysMask = 0b0011111, startMinute = 9 * 60, endMinute = 17 * 60)) }
+    val end = rememberStrictEndState()
     var options by remember { mutableStateOf(StrictOptions()) }
     var confirmText by remember { mutableStateOf("") }
-    var pickingDate by remember { mutableStateOf(false) }
-    var pickingTimeFor by remember { mutableStateOf<java.time.LocalDate?>(null) }
 
     Text("Start Strict mode", style = MaterialTheme.typography.titleMedium)
-    Text("Ends:", style = MaterialTheme.typography.bodyLarge)
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        PRESETS.forEach { (hours, label) ->
-            FilterChip(
-                selected = endKind == StrictEnd.PRESET && presetHours == hours,
-                onClick = { endKind = StrictEnd.PRESET; presetHours = hours },
-                label = { Text(label) },
-            )
-        }
-        FilterChip(
-            selected = endKind == StrictEnd.CUSTOM,
-            onClick = { pickingDate = true },
-            label = { Text(customEnd?.let { "Until " + it.format(END_FORMAT) } ?: "Pick date…") },
-        )
-        FilterChip(
-            selected = endKind == StrictEnd.SCHEDULE,
-            onClick = { endKind = StrictEnd.SCHEDULE },
-            label = { Text("Follow a schedule") },
-        )
-    }
-    if (endKind == StrictEnd.SCHEDULE) {
-        Text(
-            "Strict is active only while this schedule runs, every week, until you switch it off outside the schedule.",
-            style = MaterialTheme.typography.bodySmall,
-        )
-        ScheduleEditor(
-            schedule = schedule,
-            onToggleDay = { i -> schedule = schedule.copy(daysMask = schedule.daysMask xor (1 shl i)) },
-            onChange = { schedule = it },
-        )
-    }
+    StrictEndPicker(
+        end,
+        scheduleHint = "Strict is active only while this schedule runs, every week, until you switch it off outside the schedule.",
+    )
 
     Text("Also block:", style = MaterialTheme.typography.bodyLarge)
     OptionSwitch("Phone Settings", options.blockSettings) { options = options.copy(blockSettings = it) }
@@ -313,7 +282,8 @@ private fun StrictSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
 
     Text(
         "While Strict is on you can't switch it off, loosen or delete profiles, or uninstall Otium. " +
-            "The only early exit is the emergency unlock, which takes at least 3 days. Type I understand to continue.",
+            "The only early exit is the emergency unlock, which takes at least ${formatHours(EmergencyUnlock.BASE_WAIT_MS)} " +
+            "of phone-on time. Type I understand to continue.",
         color = MaterialTheme.colorScheme.error,
     )
     OutlinedTextField(
@@ -321,57 +291,15 @@ private fun StrictSetup(vm: ModesViewModel, onDone: () -> Unit = {}) {
         singleLine = true, modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("I understand") },
     )
-    val endValid = when (endKind) {
-        StrictEnd.PRESET -> true
-        StrictEnd.CUSTOM -> customEnd?.isAfter(LocalDateTime.now()) == true
-        StrictEnd.SCHEDULE -> schedule.daysMask != 0
-    }
     Button(
         onClick = {
-            val until = when (endKind) {
-                StrictEnd.PRESET -> System.currentTimeMillis() + presetHours * 3_600_000L
-                StrictEnd.CUSTOM -> customEnd!!.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                StrictEnd.SCHEDULE -> null
-            }
-            vm.startStrict(until, schedule.takeIf { endKind == StrictEnd.SCHEDULE }, options)
+            vm.startStrict(end.untilMs(), end.scheduleOrNull(), options)
             confirmText = ""
             onDone()
         },
-        enabled = endValid && confirmText.trim().equals("I understand", ignoreCase = true),
+        enabled = end.valid && confirmText.trim().equals("I understand", ignoreCase = true),
         modifier = Modifier.fillMaxWidth(),
     ) { Text("Start Strict mode") }
-
-    if (pickingDate) {
-        val dateState = rememberDatePickerState()
-        DatePickerDialog(
-            onDismissRequest = { pickingDate = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    pickingDate = false
-                    // The picker returns UTC midnight of the chosen day
-                    pickingTimeFor = dateState.selectedDateMillis?.let {
-                        Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
-                    }
-                }) { Text("Next") }
-            },
-            dismissButton = { TextButton(onClick = { pickingDate = false }) { Text("Cancel") } },
-        ) { DatePicker(dateState) }
-    }
-    pickingTimeFor?.let { date ->
-        val timeState = rememberTimePickerState(initialHour = 9, initialMinute = 0, is24Hour = true)
-        AlertDialog(
-            onDismissRequest = { pickingTimeFor = null },
-            confirmButton = {
-                TextButton(onClick = {
-                    customEnd = date.atTime(LocalTime.of(timeState.hour, timeState.minute))
-                    endKind = StrictEnd.CUSTOM
-                    pickingTimeFor = null
-                }) { Text("OK") }
-            },
-            dismissButton = { TextButton(onClick = { pickingTimeFor = null }) { Text("Cancel") } },
-            text = { TimePicker(timeState) },
-        )
-    }
 }
 
 @Composable
@@ -381,7 +309,8 @@ private fun StrictActive(vm: ModesViewModel, s: ModeState) {
     Text("Strict mode is on", style = MaterialTheme.typography.titleMedium)
     Text(
         when {
-            s.strictUntil != null -> "Ends " + Instant.ofEpochMilli(s.strictUntil).atZone(ZoneId.systemDefault()).format(END_FORMAT) +
+            s.strictUntil == STRICT_NO_END -> "No end date. Only the emergency unlock gets you out."
+            s.strictUntil != null -> "Ends " + Instant.ofEpochMilli(s.strictUntil).atZone(ZoneId.systemDefault()).format(StrictEndFormat) +
                 ". It switches back to Normal by itself."
             s.strictSchedule != null -> "Active during: ${s.strictSchedule.summary()}" +
                 if (active) " (running now)" else " (not running now)"
@@ -421,7 +350,6 @@ private fun EmergencySummary(s: ModeState, onOpen: () -> Unit) {
                 "Need out early? Takes ${formatHours(EmergencyUnlock.waitFor(s.emergency.history, now))} " +
                     "of phone-on time. Used $recent time(s) in the last 30 days."
             EmergencyState.Phase.WAITING -> "Waiting: ${formatHours(s.emergency.remainingMs)} left."
-            EmergencyState.Phase.WINDOW -> "Ready now, for a few minutes."
         },
     )
     OutlinedButton(onClick = onOpen) { Text("Open emergency unlock") }
@@ -442,5 +370,3 @@ fun formatHours(ms: Long): String {
     return if (h > 0) "$h h $m min" else "$m min"
 }
 
-private val PRESETS = listOf(1 to "1 hour", 6 to "6 hours", 24 to "1 day", 72 to "3 days", 168 to "1 week", 720 to "30 days")
-private val END_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM, HH:mm")

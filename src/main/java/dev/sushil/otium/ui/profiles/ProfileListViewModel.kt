@@ -61,7 +61,8 @@ class ProfileListViewModel(
             return
         }
         viewModelScope.launch {
-            when (val check = guard.checkLoosen()) {
+            val check = if (which == Quick.ADULT) guard.checkLoosenAdult() else guard.checkLoosen()
+            when (check) {
                 EditCheck.Allowed -> apply(which, false)
                 EditCheck.NeedsPassword -> passwordNeededFor = { setQuick(which, false) }
                 is EditCheck.Forbidden -> error = check.reason

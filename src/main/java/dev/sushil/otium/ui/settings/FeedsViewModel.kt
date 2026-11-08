@@ -17,10 +17,8 @@ class FeedsViewModel(private val settings: SettingsStore) : ViewModel() {
     val youtubeShorts = settings.blockYoutubeShorts.state()
     val instagramReels = settings.blockInstagramReels.state()
     val facebookReels = settings.blockFacebookReels.state()
-    val adult = settings.blockAdult.state()
 
     fun setYoutubeShorts(v: Boolean) = viewModelScope.launch { settings.setBlockYoutubeShorts(v) }.let {}
     fun setInstagramReels(v: Boolean) = viewModelScope.launch { settings.setBlockInstagramReels(v) }.let {}
     fun setFacebookReels(v: Boolean) = viewModelScope.launch { settings.setBlockFacebookReels(v) }.let {}
-    fun setAdult(v: Boolean) = viewModelScope.launch { settings.setBlockAdult(v) }.let {}
 }

@@ -4,6 +4,9 @@ import dev.sushil.otium.domain.EmergencyUnlock.HOUR_MS
 import dev.sushil.otium.domain.model.EmergencyState
 import dev.sushil.otium.domain.model.EmergencyState.Phase
 import dev.sushil.otium.domain.model.Mode
+import dev.sushil.otium.domain.model.ModeState
+import dev.sushil.otium.domain.model.STRICT_NO_END
+import dev.sushil.otium.service.ModeKeeper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,16 +29,30 @@ class EmergencyUnlockTest {
         assertEquals(5 * HOUR_MS, EmergencyUnlock.waitFor(listOf(now - 31 * day), now))
     }
 
-    @Test fun `waiting rolls into the window, carrying extra time`() {
+    @Test fun `finished wait is done, extra time doesn't go negative`() {
         val waiting = EmergencyState(Phase.WAITING, remainingMs = 1_000)
+        assertTrue(!EmergencyUnlock.isDone(EmergencyUnlock.tick(waiting, 500)))
         val after = EmergencyUnlock.tick(waiting, 61_000)
-        assertEquals(Phase.WINDOW, after.phase)
-        assertEquals(EmergencyUnlock.WINDOW_MS - 60_000, after.remainingMs)
+        assertEquals(0L, after.remainingMs)
+        assertTrue(EmergencyUnlock.isDone(after))
     }
 
-    @Test fun `missed window resets to idle`() {
-        val window = EmergencyState(Phase.WINDOW, remainingMs = 5_000)
-        assertEquals(Phase.IDLE, EmergencyUnlock.tick(window, 6_000).phase)
+    @Test fun `finishing leaves strict and releases adult strict`() {
+        val strict = ModeState(
+            mode = Mode.STRICT, strictUntil = STRICT_NO_END, adultStrictUntil = STRICT_NO_END,
+            emergency = EmergencyState(Phase.WAITING, remainingMs = 0),
+        )
+        val out = ModeKeeper.finishEmergency(strict, now)
+        assertEquals(Mode.NORMAL, out.mode)
+        assertEquals(null, out.adultStrictUntil)
+        assertEquals(Phase.IDLE, out.emergency.phase)
+        assertEquals(listOf(now), out.emergency.history)
+    }
+
+    @Test fun `finishing in normal mode still releases adult-only strict`() {
+        val out = ModeKeeper.finishEmergency(ModeState(adultStrictUntil = STRICT_NO_END), now)
+        assertEquals(null, out.adultStrictUntil)
+        assertEquals(Mode.NORMAL, out.mode)
     }
 
     @Test fun `resuming after reboot just continues from the saved time`() {
@@ -45,8 +62,7 @@ class EmergencyUnlockTest {
     }
 
     @Test fun `complete records history and starting twice is a no-op`() {
-        val window = EmergencyState(Phase.WINDOW, remainingMs = 1_000)
-        val done = EmergencyUnlock.complete(window, now)
+        val done = EmergencyUnlock.complete(EmergencyState(Phase.WAITING), now)
         assertEquals(Phase.IDLE, done.phase)
         assertEquals(listOf(now), done.history)
         val waiting = EmergencyUnlock.start(done, now)

@@ -3,6 +3,9 @@ package dev.sushil.otium.domain.model
 import dev.sushil.otium.domain.isActive
 import java.time.LocalDateTime
 
+/** Strict end time meaning "no end": stays on until the emergency unlock. */
+const val STRICT_NO_END = Long.MAX_VALUE
+
 /** How hard it is to loosen your own rules. Each mode is stricter than the one before. */
 enum class Mode { NORMAL, LOCK, STRICT }
 
@@ -31,6 +34,9 @@ data class ModeState(
     val strictUntil: Long? = null,
     /** …or is active only while this schedule runs. */
     val strictSchedule: Schedule? = null,
+    /** Adult sites can have their own Strict window, separate from the app-wide mode. Null = follow the app mode. */
+    val adultStrictUntil: Long? = null,
+    val adultStrictSchedule: Schedule? = null,
     /** A focus session blocks the whole phone (bar the essentials) until this wall-clock time (epoch ms). */
     val sessionUntil: Long? = null,
     val emergency: EmergencyState = EmergencyState(),
@@ -43,6 +49,10 @@ data class ModeState(
     fun isStrictActive(now: LocalDateTime, nowMs: Long): Boolean =
         mode == Mode.STRICT &&
             ((strictUntil != null && nowMs < strictUntil) || strictSchedule?.isActive(now) == true)
+
+    /** True while adult sites' own Strict window is running (works in any app mode). */
+    fun isAdultStrictActive(now: LocalDateTime, nowMs: Long): Boolean =
+        (adultStrictUntil != null && nowMs < adultStrictUntil) || adultStrictSchedule?.isActive(now) == true
 }
 
 /** State of the slow "emergency unlock" (see PLAN.md 5.13). */
@@ -53,5 +63,5 @@ data class EmergencyState(
     /** When previous emergency unlocks were completed (epoch ms), for escalation. */
     val history: List<Long> = emptyList(),
 ) {
-    enum class Phase { IDLE, WAITING, WINDOW }
+    enum class Phase { IDLE, WAITING }
 }

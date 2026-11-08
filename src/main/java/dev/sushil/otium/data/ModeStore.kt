@@ -53,6 +53,10 @@ class ModeStore(context: Context) {
         strictSchedule = this[STRICT_DAYS]?.let { days ->
             Schedule(days, this[STRICT_START] ?: 0, this[STRICT_END] ?: 0)
         },
+        adultStrictUntil = this[ADULT_STRICT_UNTIL],
+        adultStrictSchedule = this[ADULT_STRICT_DAYS]?.let { days ->
+            Schedule(days, this[ADULT_STRICT_START] ?: 0, this[ADULT_STRICT_END] ?: 0)
+        },
         sessionUntil = this[SESSION_UNTIL],
         emergency = EmergencyState(
             phase = this[EMERGENCY_PHASE]?.let { runCatching { EmergencyState.Phase.valueOf(it) }.getOrNull() }
@@ -76,6 +80,10 @@ class ModeStore(context: Context) {
         setOrRemove(STRICT_DAYS, s.strictSchedule?.daysMask)
         setOrRemove(STRICT_START, s.strictSchedule?.startMinute)
         setOrRemove(STRICT_END, s.strictSchedule?.endMinute)
+        setOrRemove(ADULT_STRICT_UNTIL, s.adultStrictUntil)
+        setOrRemove(ADULT_STRICT_DAYS, s.adultStrictSchedule?.daysMask)
+        setOrRemove(ADULT_STRICT_START, s.adultStrictSchedule?.startMinute)
+        setOrRemove(ADULT_STRICT_END, s.adultStrictSchedule?.endMinute)
         setOrRemove(SESSION_UNTIL, s.sessionUntil)
         this[EMERGENCY_PHASE] = s.emergency.phase.name
         this[EMERGENCY_REMAINING] = s.emergency.remainingMs
@@ -100,6 +108,10 @@ class ModeStore(context: Context) {
         val STRICT_DAYS = intPreferencesKey("strict_days")
         val STRICT_START = intPreferencesKey("strict_start")
         val STRICT_END = intPreferencesKey("strict_end")
+        val ADULT_STRICT_UNTIL = longPreferencesKey("adult_strict_until")
+        val ADULT_STRICT_DAYS = intPreferencesKey("adult_strict_days")
+        val ADULT_STRICT_START = intPreferencesKey("adult_strict_start")
+        val ADULT_STRICT_END = intPreferencesKey("adult_strict_end")
         val SESSION_UNTIL = longPreferencesKey("session_until")
         val EMERGENCY_PHASE = stringPreferencesKey("emergency_phase")
         val EMERGENCY_REMAINING = longPreferencesKey("emergency_remaining")
